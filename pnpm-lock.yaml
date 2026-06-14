@@ -8,6 +8,8 @@ importers:
 
   .: {}
 
+  packages/release-tools: {}
+
   packages/svelte-ui:
     dependencies:
       minidenticons:
