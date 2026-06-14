@@ -1,0 +1,47 @@
+{
+  "name": "@iris/svelte-ui",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Shared Svelte UI components for Iris apps",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./Avatar.svelte": {
+      "svelte": "./src/Avatar.svelte",
+      "default": "./src/Avatar.svelte"
+    },
+    "./Minidenticon.svelte": {
+      "svelte": "./src/Minidenticon.svelte",
+      "default": "./src/Minidenticon.svelte"
+    },
+    "./Name.svelte": {
+      "svelte": "./src/Name.svelte",
+      "default": "./src/Name.svelte"
+    },
+    "./UserRow.svelte": {
+      "svelte": "./src/UserRow.svelte",
+      "default": "./src/UserRow.svelte"
+    },
+    "./profile": {
+      "types": "./src/profile.ts",
+      "default": "./src/profile.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test src/profile.test.mjs"
+  },
+  "dependencies": {
+    "minidenticons": "^4.2.1"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  }
+}
+

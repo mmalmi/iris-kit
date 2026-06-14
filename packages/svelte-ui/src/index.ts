@@ -1,0 +1,14 @@
+export { default as Avatar } from './Avatar.svelte';
+export { default as Minidenticon } from './Minidenticon.svelte';
+export { default as Name } from './Name.svelte';
+export { default as UserRow } from './UserRow.svelte';
+export {
+  animalName,
+  fallbackIdentityName,
+  getProfileDisplayName,
+  getProfileName,
+  getProfilePicture,
+  hasExplicitProfileName,
+  type IrisProfile,
+} from './profile';
+
