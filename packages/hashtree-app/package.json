@@ -1,0 +1,60 @@
+{
+  "name": "@iris/hashtree-app",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Shared Hashtree app runtime helpers and UI for Iris apps",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./BandwidthHistoryChart.svelte": {
+      "svelte": "./src/BandwidthHistoryChart.svelte",
+      "default": "./src/BandwidthHistoryChart.svelte"
+    },
+    "./VisibilityPicker.svelte": {
+      "svelte": "./src/VisibilityPicker.svelte",
+      "default": "./src/VisibilityPicker.svelte"
+    },
+    "./breakpoints": {
+      "types": "./src/breakpoints.ts",
+      "default": "./src/breakpoints.ts"
+    },
+    "./defaultRelays": {
+      "types": "./src/defaultRelays.ts",
+      "default": "./src/defaultRelays.ts"
+    },
+    "./directory": {
+      "types": "./src/directory.ts",
+      "default": "./src/directory.ts"
+    },
+    "./fileIcon": {
+      "types": "./src/fileIcon.ts",
+      "default": "./src/fileIcon.ts"
+    },
+    "./gitignore": {
+      "types": "./src/gitignore.ts",
+      "default": "./src/gitignore.ts"
+    },
+    "./publishLabels": {
+      "types": "./src/publishLabels.ts",
+      "default": "./src/publishLabels.ts"
+    },
+    "./relayStatusSnapshot": {
+      "types": "./src/relayStatusSnapshot.ts",
+      "default": "./src/relayStatusSnapshot.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test src/*.test.mjs"
+  },
+  "peerDependencies": {
+    "@hashtree/core": "^0.1.7",
+    "svelte": "^5.0.0"
+  }
+}
