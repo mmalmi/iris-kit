@@ -104,7 +104,7 @@
   let activeItem = $derived(tabs.find((tab) => tab.id === activeTab) ?? tabs[0]);
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col bg-surface-1 lg:flex-row">
+<div class="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface-1 lg:flex-row">
   <aside
     class={`min-h-0 shrink-0 overflow-auto border-b border-surface-2 bg-surface-1 lg:w-[22rem] lg:border-b-0 lg:border-r ${isSettingsRootRoute ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'}`}
   >
@@ -135,7 +135,10 @@
     </div>
   </aside>
 
-  <section class={`min-w-0 flex-1 overflow-auto ${isSettingsRootRoute ? 'hidden lg:block' : 'block'}`}>
+  <section
+    class={`min-w-0 flex-1 overflow-y-auto overscroll-contain ${isSettingsRootRoute ? 'hidden lg:block' : 'block'}`}
+    data-scrollable
+  >
     <div class="w-full px-4 pb-8 pt-6 lg:px-8 lg:py-8">
       <div class="mb-6 lg:hidden">
         <button
