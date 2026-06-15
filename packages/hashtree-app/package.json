@@ -18,6 +18,10 @@
       "svelte": "./src/SettingsLayout.svelte",
       "default": "./src/SettingsLayout.svelte"
     },
+    "./SettingsShortcut.svelte": {
+      "svelte": "./src/SettingsShortcut.svelte",
+      "default": "./src/SettingsShortcut.svelte"
+    },
     "./VisibilityPicker.svelte": {
       "svelte": "./src/VisibilityPicker.svelte",
       "default": "./src/VisibilityPicker.svelte"
