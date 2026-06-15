@@ -14,6 +14,10 @@
       "svelte": "./src/BandwidthHistoryChart.svelte",
       "default": "./src/BandwidthHistoryChart.svelte"
     },
+    "./SettingsLayout.svelte": {
+      "svelte": "./src/SettingsLayout.svelte",
+      "default": "./src/SettingsLayout.svelte"
+    },
     "./VisibilityPicker.svelte": {
       "svelte": "./src/VisibilityPicker.svelte",
       "default": "./src/VisibilityPicker.svelte"

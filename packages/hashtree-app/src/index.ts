@@ -1,4 +1,5 @@
 export { default as BandwidthHistoryChart } from './BandwidthHistoryChart.svelte';
+export { default as SettingsLayout } from './SettingsLayout.svelte';
 export { default as VisibilityPicker } from './VisibilityPicker.svelte';
 export { BREAKPOINTS } from './breakpoints';
 export {
