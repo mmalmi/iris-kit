@@ -14,6 +14,18 @@
       "svelte": "./src/Avatar.svelte",
       "default": "./src/Avatar.svelte"
     },
+    "./CopyButton.svelte": {
+      "svelte": "./src/CopyButton.svelte",
+      "default": "./src/CopyButton.svelte"
+    },
+    "./CopyInput.svelte": {
+      "svelte": "./src/CopyInput.svelte",
+      "default": "./src/CopyInput.svelte"
+    },
+    "./CopyText.svelte": {
+      "svelte": "./src/CopyText.svelte",
+      "default": "./src/CopyText.svelte"
+    },
     "./Minidenticon.svelte": {
       "svelte": "./src/Minidenticon.svelte",
       "default": "./src/Minidenticon.svelte"
@@ -26,6 +38,14 @@
       "svelte": "./src/UserRow.svelte",
       "default": "./src/UserRow.svelte"
     },
+    "./clipboard": {
+      "types": "./src/clipboard.ts",
+      "default": "./src/clipboard.ts"
+    },
+    "./markdownCopy": {
+      "types": "./src/markdownCopy.ts",
+      "default": "./src/markdownCopy.ts"
+    },
     "./profile": {
       "types": "./src/profile.ts",
       "default": "./src/profile.ts"
@@ -35,7 +55,7 @@
     "src"
   ],
   "scripts": {
-    "test": "node --test src/profile.test.mjs"
+    "test": "node --test src/*.test.mjs"
   },
   "dependencies": {
     "minidenticons": "^4.2.1"
@@ -44,4 +64,3 @@
     "svelte": "^5.0.0"
   }
 }
-
