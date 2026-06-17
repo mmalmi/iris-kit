@@ -10,36 +10,221 @@ export interface IrisProfile {
   npub?: unknown;
 }
 
-const adjectives = [
-  'Happy', 'Sleepy', 'Bouncy', 'Fluffy', 'Sneaky', 'Grumpy', 'Jolly', 'Lazy',
-  'Brave', 'Clever', 'Swift', 'Gentle', 'Mighty', 'Noble', 'Proud', 'Silent',
-  'Wise', 'Wild', 'Calm', 'Fierce', 'Golden', 'Silver', 'Cosmic', 'Mystic',
-  'Dancing', 'Singing', 'Glowing', 'Sparkling', 'Daring', 'Curious', 'Playful',
-  'Serene', 'Bold', 'Charming', 'Elegant', 'Fancy', 'Graceful', 'Heroic',
-];
+export const coolNameAdjectives = [
+  'Amber',
+  'Analog',
+  'Arcane',
+  'Astral',
+  'Aurora',
+  'Azure',
+  'Blissful',
+  'Blooming',
+  'Bold',
+  'Bright',
+  'Brilliant',
+  'Calm',
+  'Celestial',
+  'Charming',
+  'Clear',
+  'Clever',
+  'Cosmic',
+  'Crimson',
+  'Crystal',
+  'Curious',
+  'Daring',
+  'Deep',
+  'Dreamy',
+  'Electric',
+  'Emerald',
+  'Ethereal',
+  'Fabled',
+  'Feral',
+  'Festival',
+  'Floating',
+  'Fluent',
+  'Free',
+  'Friendly',
+  'Gentle',
+  'Glowing',
+  'Golden',
+  'Graceful',
+  'Harmonic',
+  'Hidden',
+  'Honey',
+  'Infinite',
+  'Kind',
+  'Laughing',
+  'Liminal',
+  'Lucid',
+  'Lunar',
+  'Lush',
+  'Magnetic',
+  'Mellow',
+  'Mercury',
+  'Midnight',
+  'Mirrored',
+  'Mystic',
+  'Neon',
+  'Nimble',
+  'Noble',
+  'Northern',
+  'Nova',
+  'Opal',
+  'Open',
+  'Pacific',
+  'Patient',
+  'Pearl',
+  'Playful',
+  'Polished',
+  'Prismatic',
+  'Quiet',
+  'Radiant',
+  'Restless',
+  'River',
+  'Ruby',
+  'Saffron',
+  'Secret',
+  'Serene',
+  'Signal',
+  'Silver',
+  'Solar',
+  'Sparkling',
+  'Spiral',
+  'Stellar',
+  'Still',
+  'Stormy',
+  'Sunny',
+  'Swift',
+  'Tender',
+  'Verdant',
+  'Velvet',
+  'Vivid',
+  'Warm',
+  'Wandering',
+  'Wild',
+  'Wise',
+  'Witty',
+  'Wonder',
+  'Zephyr',
+] as const;
 
-const names = [
-  'Penguin', 'Panda', 'Koala', 'Otter', 'Fox', 'Wolf', 'Bear', 'Lion',
-  'Tiger', 'Eagle', 'Owl', 'Hawk', 'Dolphin', 'Whale', 'Shark', 'Octopus',
-  'Rabbit', 'Deer', 'Moose', 'Elk', 'Bison', 'Badger', 'Beaver',
-  'Hedgehog', 'Squirrel', 'Chipmunk', 'Giraffe', 'Elephant', 'Rhino', 'Hippo',
-  'Zebra', 'Cheetah', 'Leopard', 'Jaguar', 'Panther', 'Lynx', 'Cougar',
-  'Falcon', 'Raven', 'Crow', 'Sparrow', 'Robin', 'Cardinal', 'Pelican',
-  'Flamingo', 'Peacock', 'Swan', 'Goose', 'Duck', 'Crane', 'Heron', 'Stork',
-  'Parrot', 'Toucan', 'Finch', 'Canary', 'Puffin', 'Seal', 'Walrus',
-];
+export const coolNameNouns = [
+  'Anchor',
+  'Archive',
+  'Atlas',
+  'Aurora',
+  'Beacon',
+  'Bloom',
+  'Bridge',
+  'Canvas',
+  'Cascade',
+  'Cipher',
+  'Circuit',
+  'Cloud',
+  'Comet',
+  'Compass',
+  'Constellation',
+  'Cove',
+  'Daydream',
+  'Drift',
+  'Echo',
+  'Ember',
+  'Field',
+  'Festival',
+  'Flame',
+  'Flux',
+  'Forest',
+  'Forge',
+  'Fountain',
+  'Garden',
+  'Glacier',
+  'Halo',
+  'Harbor',
+  'Harmony',
+  'Hearth',
+  'Horizon',
+  'Lantern',
+  'Library',
+  'Lighthouse',
+  'Lagoon',
+  'Labyrinth',
+  'Meadow',
+  'Melody',
+  'Mirage',
+  'Mosaic',
+  'Nebula',
+  'Nimbus',
+  'Nova',
+  'Oasis',
+  'Opal',
+  'Orbit',
+  'Orchard',
+  'Paradox',
+  'Pearl',
+  'Planet',
+  'Portal',
+  'Prism',
+  'Pulse',
+  'Quartz',
+  'Quest',
+  'Radiance',
+  'Rain',
+  'Reef',
+  'Riddle',
+  'Ripple',
+  'River',
+  'Sanctuary',
+  'Satellite',
+  'Serenade',
+  'Signal',
+  'Solstice',
+  'Spark',
+  'Spectrum',
+  'Spiral',
+  'Starlight',
+  'Station',
+  'Studio',
+  'Summit',
+  'Sunrise',
+  'Tempo',
+  'Thread',
+  'Tide',
+  'Trail',
+  'Valley',
+  'Velvet',
+  'Voyager',
+  'Vortex',
+  'Wave',
+  'Wonder',
+  'Zenith',
+] as const;
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function hashCode(seed: string): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-    hash |= 0;
+function normalizedSeed(seed: string | null | undefined): string {
+  return text(seed) || 'iris';
+}
+
+function coolNameHash(seed: string): [number, number] {
+  let first = 0x811c9dc5;
+  let second = 0x85ebca6b;
+
+  for (let index = 0; index < seed.length; index += 1) {
+    const code = seed.charCodeAt(index);
+    first = Math.imul(first ^ code, 16777619);
+    second = Math.imul(second ^ code, 2246822519);
   }
-  return Math.abs(hash);
+
+  return [first >>> 0, second >>> 0];
+}
+
+export function coolName(seed: string | null | undefined): string {
+  const [first, second] = coolNameHash(normalizedSeed(seed));
+  const adjective = coolNameAdjectives[first % coolNameAdjectives.length];
+  const noun = coolNameNouns[second % coolNameNouns.length];
+  return `${adjective} ${noun}`;
 }
 
 export function getProfileName(profile: IrisProfile | null | undefined): string {
@@ -56,11 +241,7 @@ export function getProfilePicture(profile: IrisProfile | null | undefined): stri
 }
 
 export function fallbackIdentityName(seed: string | null | undefined): string {
-  const normalizedSeed = text(seed) || 'iris';
-  const hash = hashCode(normalizedSeed);
-  const adjective = adjectives[hash % adjectives.length];
-  const name = names[Math.floor(hash / adjectives.length) % names.length];
-  return `${adjective} ${name}`;
+  return coolName(seed);
 }
 
 export function getProfileDisplayName(
@@ -78,5 +259,3 @@ export function hasExplicitProfileName(
 ): boolean {
   return Boolean(text(preferredName) || getProfileName(profile));
 }
-
-export const animalName = fallbackIdentityName;

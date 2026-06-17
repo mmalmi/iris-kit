@@ -3,7 +3,9 @@ export { default as Minidenticon } from './Minidenticon.svelte';
 export { default as Name } from './Name.svelte';
 export { default as UserRow } from './UserRow.svelte';
 export {
-  animalName,
+  coolName,
+  coolNameAdjectives,
+  coolNameNouns,
   fallbackIdentityName,
   getProfileDisplayName,
   getProfileName,
@@ -11,4 +13,3 @@ export {
   hasExplicitProfileName,
   type IrisProfile,
 } from './profile';
-

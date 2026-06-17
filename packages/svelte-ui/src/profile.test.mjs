@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  coolName,
+  coolNameAdjectives,
+  coolNameNouns,
   fallbackIdentityName,
   getProfileDisplayName,
   getProfileName,
@@ -22,5 +25,12 @@ test('profile picture accepts common nostr fields', () => {
 
 test('fallback names are deterministic and non-empty', () => {
   assert.equal(fallbackIdentityName('abc'), fallbackIdentityName('abc'));
+  assert.equal(fallbackIdentityName('abc'), coolName('abc'));
   assert.notEqual(fallbackIdentityName('abc'), '');
+});
+
+test('cool names have enough word variance for shared app fallbacks', () => {
+  assert.ok(coolNameAdjectives.length >= 80);
+  assert.ok(coolNameNouns.length >= 80);
+  assert.notEqual(coolName('abc'), coolName('def'));
 });
