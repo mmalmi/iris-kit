@@ -4,6 +4,7 @@ export { default as CopyInput } from './CopyInput.svelte';
 export { default as CopyText } from './CopyText.svelte';
 export { default as Minidenticon } from './Minidenticon.svelte';
 export { default as Name } from './Name.svelte';
+export { default as ProxyImg } from './ProxyImg.svelte';
 export { default as UserRow } from './UserRow.svelte';
 export {
   clearCopyReset,
@@ -25,6 +26,21 @@ export {
   type MarkdownCopyOptions,
   type MarkdownCopyTimerMap,
 } from './markdownCopy';
+export {
+  DEFAULT_IMGPROXY_CONFIG,
+  DEFAULT_IMGPROXY_SETTINGS,
+  generateImgProxyUrl,
+  generateProxyUrl,
+  IMGPROXY_SETTINGS_STORAGE_KEY,
+  loadImgProxySettings,
+  normalizeImgProxySettings,
+  resolveImgProxyUrl,
+  saveImgProxySettings,
+  type ImgProxyConfig,
+  type ImgProxyOptions,
+  type ImgProxySettings,
+  type ImgProxySettingsInput,
+} from './imgproxy';
 export {
   coolName,
   coolNameAdjectives,

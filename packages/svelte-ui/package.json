@@ -34,6 +34,10 @@
       "svelte": "./src/Name.svelte",
       "default": "./src/Name.svelte"
     },
+    "./ProxyImg.svelte": {
+      "svelte": "./src/ProxyImg.svelte",
+      "default": "./src/ProxyImg.svelte"
+    },
     "./UserRow.svelte": {
       "svelte": "./src/UserRow.svelte",
       "default": "./src/UserRow.svelte"
@@ -41,6 +45,10 @@
     "./clipboard": {
       "types": "./src/clipboard.ts",
       "default": "./src/clipboard.ts"
+    },
+    "./imgproxy": {
+      "types": "./src/imgproxy.ts",
+      "default": "./src/imgproxy.ts"
     },
     "./markdownCopy": {
       "types": "./src/markdownCopy.ts",

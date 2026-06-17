@@ -1,5 +1,7 @@
 <script lang="ts">
   import Minidenticon from './Minidenticon.svelte';
+  import ProxyImg from './ProxyImg.svelte';
+  import type { ImgProxySettingsInput } from './imgproxy';
   import {
     getProfileDisplayName,
     getProfilePicture,
@@ -20,6 +22,8 @@
     ariaHidden?: boolean;
     imageClass?: string;
     fallbackClass?: string;
+    imgProxy?: ImgProxySettingsInput | false;
+    loadOriginalIfProxyFails?: boolean;
     class?: string;
   }
 
@@ -37,6 +41,8 @@
     ariaHidden = true,
     imageClass = '',
     fallbackClass = '',
+    imgProxy = undefined,
+    loadOriginalIfProxyFails = undefined,
     class: className = '',
   }: Props = $props();
 
@@ -53,19 +59,23 @@
       imageError = false;
     }
   });
+
 </script>
 
 {#if resolvedPicture && !imageError}
-  <img
+  <ProxyImg
     src={resolvedPicture}
     alt={ariaHidden ? '' : (alt ?? label)}
-    aria-hidden={ariaHidden ? 'true' : undefined}
+    ariaHidden={ariaHidden}
     title={title ?? label}
     width={size}
     height={size}
+    square={true}
     class={`iris-avatar iris-avatar-image ${className} ${imageClass}`.trim()}
     style={`--iris-avatar-size:${size}px;`}
-    onerror={() => (imageError = true)}
+    {imgProxy}
+    {loadOriginalIfProxyFails}
+    onError={() => (imageError = true)}
   />
 {:else}
   <Minidenticon
