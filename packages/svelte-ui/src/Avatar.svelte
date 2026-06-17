@@ -51,6 +51,15 @@
 
   let resolvedPicture = $derived((picture ?? getProfilePicture(profile)).trim());
   let label = $derived(getProfileDisplayName(profile, pubkey, name, fallbackName));
+  let imageStyle = $derived([
+    `--iris-avatar-size:${size}px`,
+    `width:${size}px`,
+    `height:${size}px`,
+    'display:block',
+    'flex:0 0 auto',
+    'border-radius:999px',
+    'object-fit:cover',
+  ].join(';'));
 
   $effect(() => {
     const resetKey = `${pubkey}\n${resolvedPicture}`;
@@ -72,7 +81,7 @@
     height={size}
     square={true}
     class={`iris-avatar iris-avatar-image ${className} ${imageClass}`.trim()}
-    style={`--iris-avatar-size:${size}px;`}
+    style={imageStyle}
     {imgProxy}
     {loadOriginalIfProxyFails}
     onError={() => (imageError = true)}

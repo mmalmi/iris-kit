@@ -7,15 +7,28 @@ import {
   fallbackIdentityName,
   getProfileDisplayName,
   getProfileName,
+  getProfileNameCandidates,
   getProfilePicture,
 } from './profile.ts';
 
 test('profile names prefer explicit display fields', () => {
   assert.equal(getProfileName({ name: 'Name', display_name: 'Display' }), 'Display');
   assert.equal(getProfileName({ name: 'Name', displayName: 'Camel' }), 'Camel');
+  assert.equal(getProfileName({ username: 'User name' }), 'User name');
+  assert.equal(getProfileName({ nickname: 'Nick' }), 'Nick');
   assert.equal(getProfileDisplayName({ name: 'Name' }, 'abc'), 'Name');
   assert.equal(getProfileDisplayName({ name: 'Name' }, 'abc', 'Preferred'), 'Preferred');
   assert.equal(getProfileDisplayName(undefined, 'abc', undefined, 'Fallback'), 'Fallback');
+});
+
+test('profile name candidates include common nostr aliases without duplicates', () => {
+  assert.deepEqual(getProfileNameCandidates({
+    display_name: 'Display',
+    displayName: 'Display',
+    name: 'name',
+    username: 'user',
+    nickname: 'nick',
+  }), ['Display', 'name', 'user', 'nick']);
 });
 
 test('profile picture accepts common nostr fields', () => {

@@ -3,6 +3,7 @@ export interface IrisProfile {
   display_name?: unknown;
   displayName?: unknown;
   username?: unknown;
+  nickname?: unknown;
   picture?: unknown;
   image?: unknown;
   about?: unknown;
@@ -228,11 +229,18 @@ export function coolName(seed: string | null | undefined): string {
 }
 
 export function getProfileName(profile: IrisProfile | null | undefined): string {
-  if (!profile) return '';
-  return text(profile.display_name)
-    || text(profile.displayName)
-    || text(profile.name)
-    || text(profile.username);
+  return getProfileNameCandidates(profile)[0] ?? '';
+}
+
+export function getProfileNameCandidates(profile: IrisProfile | null | undefined): string[] {
+  if (!profile) return [];
+  return uniqueTexts([
+    profile.display_name,
+    profile.displayName,
+    profile.name,
+    profile.username,
+    profile.nickname,
+  ]);
 }
 
 export function getProfilePicture(profile: IrisProfile | null | undefined): string {
@@ -258,4 +266,17 @@ export function hasExplicitProfileName(
   preferredName?: string | null,
 ): boolean {
   return Boolean(text(preferredName) || getProfileName(profile));
+}
+
+function uniqueTexts(values: readonly unknown[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const item = text(value);
+    const key = item.toLocaleLowerCase();
+    if (!item || seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+  return result;
 }

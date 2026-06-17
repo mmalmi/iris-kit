@@ -48,6 +48,7 @@ export {
   fallbackIdentityName,
   getProfileDisplayName,
   getProfileName,
+  getProfileNameCandidates,
   getProfilePicture,
   hasExplicitProfileName,
   type IrisProfile,
