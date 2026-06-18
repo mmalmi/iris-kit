@@ -1,10 +1,10 @@
 import type {
-  IrisProfileCapabilities,
   IrisProfileFacet,
   IrisProfileKeyPurpose,
   IrisProfileRosterOp,
   IrisProfileRosterOpContent,
 } from './profile.ts';
+import { normalizeCapabilities } from './profile.ts';
 import { sortRecord } from './profileJson.ts';
 
 export function normalizeIrisProfileRosterOpContent(
@@ -67,16 +67,6 @@ export function normalizeFacet(facet: IrisProfileFacet): IrisProfileFacet {
     capabilities: normalizeCapabilities(facet.capabilities ?? {}),
     added_at: facet.added_at,
     ...(facet.label !== undefined ? { label: facet.label } : {}),
-  };
-}
-
-export function normalizeCapabilities(capabilities: IrisProfileCapabilities): IrisProfileCapabilities {
-  return {
-    ...(capabilities.can_write_roots ? { can_write_roots: true } : {}),
-    ...(capabilities.can_admin_profile ? { can_admin_profile: true } : {}),
-    ...(capabilities.can_recover_app_keys ? { can_recover_app_keys: true } : {}),
-    ...(capabilities.can_receive_key_wraps ? { can_receive_key_wraps: true } : {}),
-    ...(capabilities.can_decrypt_key_epochs ? { can_decrypt_key_epochs: true } : {}),
   };
 }
 
