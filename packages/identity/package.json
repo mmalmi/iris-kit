@@ -16,6 +16,22 @@
     "./profile": {
       "types": "./src/profile.ts",
       "default": "./src/profile.ts"
+    },
+    "./profileEvents": {
+      "types": "./src/profileEvents.ts",
+      "default": "./src/profileEvents.ts"
+    },
+    "./profileProjection": {
+      "types": "./src/profileProjection.ts",
+      "default": "./src/profileProjection.ts"
+    },
+    "./representativeProfile": {
+      "types": "./src/representativeProfile.ts",
+      "default": "./src/representativeProfile.ts"
+    },
+    "./session": {
+      "types": "./src/session.ts",
+      "default": "./src/session.ts"
     }
   },
   "files": [
