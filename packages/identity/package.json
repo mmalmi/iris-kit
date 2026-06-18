@@ -1,0 +1,30 @@
+{
+  "name": "@iris/identity",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Shared IrisProfile identity and device-link helpers",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./deviceLink": {
+      "types": "./src/deviceLink.ts",
+      "default": "./src/deviceLink.ts"
+    },
+    "./profile": {
+      "types": "./src/profile.ts",
+      "default": "./src/profile.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test src/*.test.mjs"
+  },
+  "dependencies": {
+    "nostr-tools": "2.23.5"
+  }
+}
