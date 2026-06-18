@@ -2,13 +2,13 @@ import { nip19 } from 'nostr-tools';
 import {
   APP_KEY_WRITER_CAPABILITIES,
   createAddAppKeyRosterOp,
-  irisProfileRosterParentIds,
   normalizeHexPubkey,
   type IrisProfileCapabilities,
   type IrisProfileId,
   type IrisProfileRosterOpContent,
   type SignedIrisProfileRosterOp,
 } from './profile.ts';
+import { irisProfileRosterParentIds } from './profileProjection.ts';
 
 export const DEVICE_LINK_INVITE_PREFIX = 'iris-drive://invite/';
 export const DEVICE_LINK_INVITE_SINGLE_SLASH_PREFIX = 'iris-drive:/invite/';
