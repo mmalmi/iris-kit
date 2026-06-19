@@ -38,6 +38,10 @@
       "svelte": "./src/ProxyImg.svelte",
       "default": "./src/ProxyImg.svelte"
     },
+    "./SocialDistanceBadge.svelte": {
+      "svelte": "./src/SocialDistanceBadge.svelte",
+      "default": "./src/SocialDistanceBadge.svelte"
+    },
     "./UserRow.svelte": {
       "svelte": "./src/UserRow.svelte",
       "default": "./src/UserRow.svelte"
