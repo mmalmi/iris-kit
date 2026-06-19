@@ -14,6 +14,10 @@
       "svelte": "./src/Avatar.svelte",
       "default": "./src/Avatar.svelte"
     },
+    "./AccountSwitcher.svelte": {
+      "svelte": "./src/AccountSwitcher.svelte",
+      "default": "./src/AccountSwitcher.svelte"
+    },
     "./CopyButton.svelte": {
       "svelte": "./src/CopyButton.svelte",
       "default": "./src/CopyButton.svelte"

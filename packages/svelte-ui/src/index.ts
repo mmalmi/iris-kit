@@ -1,3 +1,4 @@
+export { default as AccountSwitcher } from './AccountSwitcher.svelte';
 export { default as Avatar } from './Avatar.svelte';
 export { default as CopyButton } from './CopyButton.svelte';
 export { default as CopyInput } from './CopyInput.svelte';
