@@ -10,9 +10,8 @@ import {
 } from './profile.ts';
 import { irisProfileRosterParentIds } from './profileProjection.ts';
 
-export const DEVICE_LINK_INVITE_PREFIX = 'iris-drive://invite/';
-export const DEVICE_LINK_INVITE_SINGLE_SLASH_PREFIX = 'iris-drive:/invite/';
-export const DEVICE_LINK_INVITE_WEB_PREFIX = 'https://drive.iris.to/invite/';
+export const DEVICE_LINK_INVITE_PREFIX = 'https://drive.iris.to/invite/';
+export const DEVICE_LINK_INVITE_WEB_PREFIX = DEVICE_LINK_INVITE_PREFIX;
 export const DEVICE_LINK_INVITE_VERSION = 1;
 
 export interface DeviceLinkInvite {
@@ -31,19 +30,10 @@ export interface DeviceLinkRequest {
 }
 
 interface DeviceLinkInvitePayload {
-  v?: number;
-  profileId?: string;
-  profile_id?: string;
-  profile?: string;
-  adminAppKeyNpub?: string;
-  admin_app_key_npub?: string;
-  admin?: string;
-  linkSecret?: string;
-  link_secret?: string;
-  secret?: string;
-  ownerNpub?: string;
-  owner_npub?: string;
-  owner?: string;
+  v: number;
+  profileId: string;
+  adminAppKeyNpub: string;
+  linkSecret: string;
 }
 
 export function encodeDeviceLinkInvite(invite: DeviceLinkInvite): string {
@@ -63,18 +53,6 @@ export function parseDeviceLinkInvite(input: string): DeviceLinkInvite | null {
   if (payload !== null) {
     return parseInviteJson(base64UrlDecode(payload));
   }
-  if (value.startsWith('{')) {
-    return parseInviteJson(value);
-  }
-  const legacy = legacyInviteQuery(value);
-  if (legacy !== null) {
-    const params = new URLSearchParams(legacy);
-    const profileId = params.get('profile') ?? params.get('profile_id') ?? params.get('owner');
-    const admin = params.get('admin');
-    const secret = params.get('secret');
-    if (!profileId || !admin || !secret) return null;
-    return normalizeInvitePayload({ profileId, admin, secret });
-  }
   return null;
 }
 
@@ -84,14 +62,6 @@ export function isCompleteDeviceLinkInviteInput(input: string): boolean {
   if (payloadFromShareInviteUrl(value) !== null) return false;
   const payload = payloadFromInviteUrl(value);
   if (payload !== null) return payload.length >= 32;
-  const legacy = legacyInviteQuery(value);
-  if (legacy !== null) {
-    const params = new URLSearchParams(legacy);
-    return Boolean((params.get('profile') ?? params.get('profile_id') ?? params.get('owner'))
-      && params.get('admin')
-      && params.get('secret'));
-  }
-  if (value.startsWith('{')) return parseDeviceLinkInvite(value) !== null;
   return false;
 }
 
@@ -168,11 +138,11 @@ function parseInviteJson(json: string): DeviceLinkInvite | null {
 }
 
 function normalizeInvitePayload(payload: DeviceLinkInvitePayload): DeviceLinkInvite | null {
-  const version = payload.v ?? DEVICE_LINK_INVITE_VERSION;
+  const version = payload.v;
   if (version !== DEVICE_LINK_INVITE_VERSION) return null;
-  const profileId = payload.profileId ?? payload.profile_id ?? payload.profile;
-  const admin = payload.adminAppKeyNpub ?? payload.admin_app_key_npub ?? payload.admin;
-  const secret = payload.linkSecret ?? payload.link_secret ?? payload.secret;
+  const profileId = payload.profileId;
+  const admin = payload.adminAppKeyNpub;
+  const secret = payload.linkSecret;
   if (!profileId || !admin || !secret) return null;
   const adminAppKeyPubkey = npubToPubkey(admin);
   if (!adminAppKeyPubkey) return null;
@@ -187,8 +157,6 @@ function payloadFromInviteUrl(input: string): string | null {
   const lower = input.toLowerCase();
   const prefix = [
     DEVICE_LINK_INVITE_PREFIX,
-    DEVICE_LINK_INVITE_SINGLE_SLASH_PREFIX,
-    DEVICE_LINK_INVITE_WEB_PREFIX,
   ].find((candidate) => lower.startsWith(candidate));
   if (!prefix) return null;
   return input.slice(prefix.length).split(/[?#]/, 1)[0].trim();
@@ -203,18 +171,6 @@ function payloadFromShareInviteUrl(input: string): string | null {
   ].find((candidate) => lower.startsWith(candidate));
   if (!prefix) return null;
   return input.slice(prefix.length).split(/[?#]/, 1)[0].trim();
-}
-
-function legacyInviteQuery(input: string): string | null {
-  const lower = input.toLowerCase();
-  const prefix = [
-    'iris-drive://link-device',
-    'iris-drive:/link-device',
-    'https://drive.iris.to/link-device',
-  ].find((candidate) => lower.startsWith(candidate));
-  if (!prefix) return null;
-  const rest = input.slice(prefix.length);
-  return rest.startsWith('?') ? rest.slice(1) : null;
 }
 
 function base64UrlEncode(value: string): string {

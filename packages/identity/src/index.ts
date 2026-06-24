@@ -1,3 +1,4 @@
+export * from './appKeyAttach.ts';
 export * from './deviceLink.ts';
 export * from './profile.ts';
 export * from './profileDtags.ts';
@@ -7,3 +8,4 @@ export * from './profileProjection.ts';
 export * from './profileValidation.ts';
 export * from './representativeProfile.ts';
 export * from './session.ts';
+export * from './signers.ts';

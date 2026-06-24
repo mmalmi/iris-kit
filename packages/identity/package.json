@@ -9,6 +9,10 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./appKeyAttach": {
+      "types": "./src/appKeyAttach.ts",
+      "default": "./src/appKeyAttach.ts"
+    },
     "./deviceLink": {
       "types": "./src/deviceLink.ts",
       "default": "./src/deviceLink.ts"
@@ -32,6 +36,10 @@
     "./session": {
       "types": "./src/session.ts",
       "default": "./src/session.ts"
+    },
+    "./signers": {
+      "types": "./src/signers.ts",
+      "default": "./src/signers.ts"
     }
   },
   "files": [
@@ -41,6 +49,7 @@
     "test": "node --test src/*.test.mjs"
   },
   "dependencies": {
+    "nostr-social-graph": "http://iris.localhost:17321/npub1xdhnr9mrv47kkrn95k6cwecearydeh8e895990n3acntwvmgk2dsdeeycm/packages%2Fnostr-social-graph/1.0.37-fact-events.0/nostr-social-graph-1.0.37-fact-events.0.tgz",
     "nostr-tools": "2.23.5"
   }
 }

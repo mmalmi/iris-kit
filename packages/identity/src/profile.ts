@@ -1,7 +1,7 @@
 export const IRIS_PROFILE_ROSTER_SCHEMA = 1;
 export const IRIS_PROFILE_FACET_ACCEPTANCE_SCHEMA = 1;
-export const KIND_IRIS_PROFILE_ROSTER_OP = 30_078;
-export const KIND_IRIS_PROFILE_FACET_ACCEPTANCE = 30_078;
+export const KIND_IRIS_PROFILE_ROSTER_OP = 7_368;
+export const KIND_IRIS_PROFILE_FACET_ACCEPTANCE = 7_368;
 
 export type IrisProfileId = string;
 export type IrisProfileKeyPurpose =
@@ -93,6 +93,23 @@ export interface IrisProfileRosterProjection {
   rejected_op_ids: string[];
 }
 
+export interface IrisNostrEventDraft {
+  kind: number;
+  content: string;
+  created_at: number;
+  tags: string[][];
+}
+
+export interface BuildIrisProfileRosterOpEventDraftOptions {
+  signerPubkey: string;
+  profileId: IrisProfileId;
+  op: IrisProfileRosterOp;
+  parents?: string[];
+  actorSeq?: number;
+  createdAt?: number;
+  clientNonce?: string;
+}
+
 export interface BuildIrisProfileRosterOpEventOptions {
   signerSecretKey: Uint8Array;
   profileId: IrisProfileId;
@@ -100,6 +117,15 @@ export interface BuildIrisProfileRosterOpEventOptions {
   parents?: string[];
   actorSeq?: number;
   createdAt?: number;
+  clientNonce?: string;
+}
+
+export interface BuildIrisProfileFacetAcceptanceEventDraftOptions {
+  signerPubkey: string;
+  profileId: IrisProfileId;
+  purposes: IrisProfileKeyPurpose[];
+  rosterOpId?: string;
+  acceptedAt?: number;
   clientNonce?: string;
 }
 
