@@ -62,7 +62,7 @@
     "test": "node --test src/*.test.mjs"
   },
   "peerDependencies": {
-    "@hashtree/core": "^0.1.7",
+    "@hashtree/core": "0.1.8",
     "svelte": "^5.0.0"
   }
 }
