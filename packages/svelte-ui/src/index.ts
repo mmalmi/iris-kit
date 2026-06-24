@@ -3,6 +3,7 @@ export { default as Avatar } from './Avatar.svelte';
 export { default as CopyButton } from './CopyButton.svelte';
 export { default as CopyInput } from './CopyInput.svelte';
 export { default as CopyText } from './CopyText.svelte';
+export { default as IdentityRecoveryPanel } from './IdentityRecoveryPanel.svelte';
 export { default as Minidenticon } from './Minidenticon.svelte';
 export { default as Name } from './Name.svelte';
 export { default as ProxyImg } from './ProxyImg.svelte';
@@ -43,6 +44,14 @@ export {
   type ImgProxySettings,
   type ImgProxySettingsInput,
 } from './imgproxy';
+export {
+  IDENTITY_RECOVERY_METHODS,
+  identityRecoveryRequestHasInput,
+  normalizeIdentityRecoveryRequest,
+  type IdentityRecoveryMethod,
+  type IdentityRecoveryMethodOption,
+  type IdentityRecoveryRequest,
+} from './identityRecovery';
 export {
   coolName,
   coolNameAdjectives,

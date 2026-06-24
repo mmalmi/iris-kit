@@ -30,6 +30,10 @@
       "svelte": "./src/CopyText.svelte",
       "default": "./src/CopyText.svelte"
     },
+    "./IdentityRecoveryPanel.svelte": {
+      "svelte": "./src/IdentityRecoveryPanel.svelte",
+      "default": "./src/IdentityRecoveryPanel.svelte"
+    },
     "./Minidenticon.svelte": {
       "svelte": "./src/Minidenticon.svelte",
       "default": "./src/Minidenticon.svelte"
@@ -57,6 +61,10 @@
     "./imgproxy": {
       "types": "./src/imgproxy.ts",
       "default": "./src/imgproxy.ts"
+    },
+    "./identityRecovery": {
+      "types": "./src/identityRecovery.ts",
+      "default": "./src/identityRecovery.ts"
     },
     "./markdownCopy": {
       "types": "./src/markdownCopy.ts",

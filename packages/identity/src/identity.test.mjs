@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { finalizeEvent, generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
+import { finalizeEvent, generateSecretKey, getPublicKey, nip19, nip44 } from 'nostr-tools';
 import { generateSeedWords } from 'nostr-tools/nip06';
 import {
   attachIrisAppKeyToProfile,
@@ -574,6 +574,44 @@ test('NIP-07 and NIP-46 recovery signers can attach an AppKey through the same f
   assert.equal(nip46Attachment.addedByPubkey, recovery);
   assert.equal(nip07Attachment.rosterOp.content.op.op, 'add_facet');
   assert.equal(nip46Attachment.rosterOp.content.op.op, 'add_facet');
+});
+
+test('recovery signers expose NIP-44 encryption when the underlying method can decrypt secrets', async () => {
+  const senderSecret = generateSecretKey();
+  const senderPubkey = getPublicKey(senderSecret);
+  const recipientSecret = generateSecretKey();
+  const recipientPubkey = getPublicKey(recipientSecret);
+  const recipient = createIrisIdentitySignerFromNsec(nip19.nsecEncode(recipientSecret));
+  const conversationKey = nip44.v2.utils.getConversationKey(senderSecret, recipientPubkey);
+  const ciphertext = nip44.v2.encrypt('drive-content-key', conversationKey);
+
+  assert.equal(await recipient.nip44Decrypt?.(senderPubkey, ciphertext), 'drive-content-key');
+  const rewrapped = await recipient.nip44Encrypt?.(senderPubkey, 'drive-content-key');
+  assert.equal(nip44.v2.decrypt(rewrapped, conversationKey), 'drive-content-key');
+
+  const calls = [];
+  const remote = createIrisIdentitySignerFromNip46({
+    getPublicKey: async () => recipientPubkey,
+    signEvent: async (draft) => finalizeEvent({
+      ...draft,
+      tags: draft.tags.map((tag) => tag.slice()),
+    }, recipientSecret),
+    nip44Encrypt: async (pubkey, plaintext) => {
+      calls.push(['encrypt', pubkey, plaintext]);
+      return 'remote-ciphertext';
+    },
+    nip44Decrypt: async (pubkey, encrypted) => {
+      calls.push(['decrypt', pubkey, encrypted]);
+      return 'remote-plaintext';
+    },
+  });
+
+  assert.equal(await remote.nip44Decrypt?.(senderPubkey, 'remote-wrap'), 'remote-plaintext');
+  assert.equal(await remote.nip44Encrypt?.(senderPubkey, 'remote-key'), 'remote-ciphertext');
+  assert.deepEqual(calls, [
+    ['decrypt', senderPubkey, 'remote-wrap'],
+    ['encrypt', senderPubkey, 'remote-key'],
+  ]);
 });
 
 test('AppKey attach rejects signers without admin or recovery capability', async () => {
