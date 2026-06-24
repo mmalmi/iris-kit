@@ -19,12 +19,13 @@ importers:
 
   packages/identity:
     dependencies:
-      nostr-social-graph:
-        specifier: link:../../../nostr-social-graph/ts
-        version: link:../../../nostr-social-graph/ts
       nostr-tools:
         specifier: 2.23.5
         version: 2.23.5(typescript@5.9.3)
+    devDependencies:
+      nostr-social-graph:
+        specifier: link:../../../nostr-social-graph/ts
+        version: link:../../../nostr-social-graph/ts
 
   packages/ndk:
     dependencies:

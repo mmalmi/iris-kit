@@ -49,19 +49,20 @@ export function applyRosterOp(
     && op.facet.pubkey === signer
     && Boolean(op.facet.capabilities?.can_admin_profile);
   const canAdmin = isBootstrap || Boolean(projection.active_facets[signer]?.capabilities?.can_admin_profile);
-  const canRecover = Boolean(projection.active_facets[signer]?.capabilities?.can_recover_app_keys);
+  const signerFacet = projection.active_facets[signer];
+  const canRecover = Boolean(signerFacet?.capabilities?.can_recover_app_keys);
+  const canDecryptKeyEpochs = Boolean(signerFacet?.capabilities?.can_decrypt_key_epochs);
   const canRecoverRoster = canRecover && (
-    (op.op === 'add_facet' && !op.facet.capabilities?.can_admin_profile)
+    (op.op === 'add_facet' && op.facet.purposes?.includes('app_key'))
     || op.op === 'tombstone_facet'
-    || op.op === 'rotate_key_epoch'
-    || op.op === 'repair_key_wraps'
+    || ((op.op === 'rotate_key_epoch' || op.op === 'repair_key_wraps') && canDecryptKeyEpochs)
   );
   const canRepairEpoch = op.op === 'repair_key_wraps'
     && projection.key_epochs[String(op.epoch)]?.signed_by_pubkey === signer;
   if (!canAdmin && !canRecoverRoster && !canRepairEpoch) return false;
 
   if (op.op === 'add_facet') {
-    if (projection.tombstones[op.facet.pubkey]) return false;
+    delete projection.tombstones[op.facet.pubkey];
     projection.active_facets[op.facet.pubkey] ??= {
       ...op.facet,
       purposes: op.facet.purposes ?? [],

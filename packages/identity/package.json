@@ -49,7 +49,12 @@
     "test": "node --test src/*.test.mjs"
   },
   "dependencies": {
-    "nostr-social-graph": "link:../../../nostr-social-graph/ts",
     "nostr-tools": "2.23.5"
+  },
+  "peerDependencies": {
+    "nostr-social-graph": "*"
+  },
+  "devDependencies": {
+    "nostr-social-graph": "link:../../../nostr-social-graph/ts"
   }
 }
