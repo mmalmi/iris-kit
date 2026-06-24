@@ -1,10 +1,25 @@
 import { finalizeEvent, getPublicKey, type Event } from 'nostr-tools';
 import {
-  buildFactOpDraft,
-  fact,
-  parseFactOpEvent,
-  type Fact,
-  type FactOp,
+  IDENTITY_CAPABILITY_ADMIN,
+  IDENTITY_CAPABILITY_DECRYPT_SECRET_EPOCHS,
+  IDENTITY_CAPABILITY_RECEIVE_SECRET_WRAPS,
+  IDENTITY_CAPABILITY_RECOVER,
+  IDENTITY_CAPABILITY_WRITE,
+  IDENTITY_PURPOSE_APP,
+  IDENTITY_PURPOSE_PROFILE,
+  IDENTITY_PURPOSE_RECOVERY,
+  IDENTITY_PURPOSE_REMOTE_SIGNER,
+  buildIdentityKeyAcceptanceDraft,
+  buildIdentityRosterOpDraft,
+  parseIdentityKeyAcceptanceEvent,
+  parseIdentityRosterOpEvent,
+  type IdentityKeyAcceptanceContent,
+  type IdentityKeyCapability,
+  type IdentityKeyPurpose,
+  type IdentityRosterProjection,
+  type IdentityRosterOp,
+  type IdentityRosterOpContent,
+  type SignedIdentityRosterOp,
 } from 'nostr-social-graph';
 import {
   IRIS_PROFILE_FACET_ACCEPTANCE_SCHEMA,
@@ -17,6 +32,7 @@ import {
   type IrisProfileCapabilities,
   type IrisProfileFacetAcceptanceContent,
   type IrisProfileKeyPurpose,
+  type IrisProfileRosterProjection,
   type IrisProfileRosterOp,
   type IrisProfileRosterOpContent,
   type SignedIrisProfileFacetAcceptance,
@@ -26,31 +42,10 @@ import {
 } from './profile.ts';
 import {
   currentUnixSeconds,
-  isHex32,
   randomClientNonce,
   requireValidSignature,
 } from './profileJson.ts';
 import { normalizeRosterOp, sortPurposes } from './profileNormalize.ts';
-
-const ROSTER_OP_TYPE = 'iris_profile_roster_op';
-const FACET_ACCEPTANCE_TYPE = 'iris_profile_facet_acceptance';
-
-const CAPABILITY_KEYS = [
-  'can_write_roots',
-  'can_admin_profile',
-  'can_recover_app_keys',
-  'can_receive_key_wraps',
-  'can_decrypt_key_epochs',
-] as const;
-
-const PURPOSES = [
-  'app_key',
-  'recovery_phrase',
-  'nip46_signer',
-  'social_profile',
-] as const;
-
-type CapabilityKey = typeof CAPABILITY_KEYS[number];
 
 export function buildIrisProfileRosterOpEventDraft(
   options: BuildIrisProfileRosterOpEventDraftOptions,
@@ -60,21 +55,15 @@ export function buildIrisProfileRosterOpEventDraft(
   const createdAt = options.createdAt ?? currentUnixSeconds();
   const clientNonce = options.clientNonce ?? randomClientNonce();
   const parents = options.parents?.slice() ?? [];
-  const content: IrisProfileRosterOpContent = {
-    schema: IRIS_PROFILE_ROSTER_SCHEMA,
-    profile_id: options.profileId,
-    actor_pubkey: signerPubkey,
-    ...(options.actorSeq !== undefined ? { actor_seq: options.actorSeq } : {}),
-    ...(parents.length ? { parents } : {}),
-    client_nonce: clientNonce,
-    created_at: createdAt,
-    op: normalizeRosterOp(options.op),
-  };
-  const draft = buildFactOpDraft(
-    options.profileId,
-    rosterOpContentFacts(content),
-    { prev: parents },
-  );
+  const draft = buildIdentityRosterOpDraft({
+    signerPubkey,
+    identity: options.profileId,
+    op: irisProfileRosterOpToIdentity(normalizeRosterOp(options.op)),
+    parents,
+    ...(options.actorSeq !== undefined ? { actorSeq: options.actorSeq } : {}),
+    createdAt,
+    clientNonce,
+  });
 
   return {
     kind: draft.kind,
@@ -105,19 +94,14 @@ export function buildIrisProfileFacetAcceptanceEventDraft(
   const acceptedAt = options.acceptedAt ?? currentUnixSeconds();
   const clientNonce = options.clientNonce ?? randomClientNonce();
   const purposes = sortPurposes(options.purposes);
-  const content: IrisProfileFacetAcceptanceContent = {
-    schema: IRIS_PROFILE_FACET_ACCEPTANCE_SCHEMA,
-    profile_id: options.profileId,
-    facet_pubkey: facetPubkey,
-    purposes,
-    ...(options.rosterOpId !== undefined ? { roster_op_id: options.rosterOpId } : {}),
-    client_nonce: clientNonce,
-    accepted_at: acceptedAt,
-  };
-  const draft = buildFactOpDraft(
-    options.profileId,
-    facetAcceptanceContentFacts(content),
-  );
+  const draft = buildIdentityKeyAcceptanceDraft({
+    signerPubkey: facetPubkey,
+    identity: options.profileId,
+    purposes: purposes.map(irisPurposeToIdentity),
+    ...(options.rosterOpId !== undefined ? { rosterOpId: options.rosterOpId } : {}),
+    acceptedAt,
+    clientNonce,
+  });
 
   return {
     kind: draft.kind,
@@ -144,8 +128,8 @@ export function signIrisProfileFacetAcceptance(
 
 export function parseIrisProfileRosterOpEvent(event: Event): SignedIrisProfileRosterOp {
   requireValidSignature(event);
-  const op = parseFactOpEvent(event);
-  const content = rosterOpContentFromFacts(op);
+  const signed = parseIdentityRosterOpEvent(event);
+  const content = identityRosterContentToIris(signed.content);
   if (content.actor_pubkey !== event.pubkey) {
     throw new Error('roster actor signer mismatch');
   }
@@ -153,8 +137,8 @@ export function parseIrisProfileRosterOpEvent(event: Event): SignedIrisProfileRo
     throw new Error('roster created_at mismatch');
   }
   return {
-    op_id: event.id,
-    signer_pubkey: event.pubkey,
+    op_id: signed.opId,
+    signer_pubkey: signed.signerPubkey,
     content,
     event_json: JSON.stringify(event),
   };
@@ -162,8 +146,8 @@ export function parseIrisProfileRosterOpEvent(event: Event): SignedIrisProfileRo
 
 export function parseIrisProfileFacetAcceptanceEvent(event: Event): SignedIrisProfileFacetAcceptance {
   requireValidSignature(event);
-  const op = parseFactOpEvent(event);
-  const content = facetAcceptanceContentFromFacts(op);
+  const signed = parseIdentityKeyAcceptanceEvent(event);
+  const content = identityKeyAcceptanceContentToIris(signed.content);
   if (content.facet_pubkey !== event.pubkey) {
     throw new Error('facet acceptance signer mismatch');
   }
@@ -171,255 +155,245 @@ export function parseIrisProfileFacetAcceptanceEvent(event: Event): SignedIrisPr
     throw new Error('facet acceptance accepted_at mismatch');
   }
   return {
-    acceptance_id: event.id,
-    signer_pubkey: event.pubkey,
+    acceptance_id: signed.acceptanceId,
+    signer_pubkey: signed.signerPubkey,
     content,
     event_json: JSON.stringify(event),
   };
 }
 
-function rosterOpContentFacts(content: IrisProfileRosterOpContent): Fact[] {
-  const facts = [
-    fact('type', [ROSTER_OP_TYPE]),
-    fact('schema', [String(content.schema)]),
-    fact('actor_pubkey', [content.actor_pubkey]),
-    ...(content.actor_seq !== undefined ? [fact('actor_seq', [String(content.actor_seq)])] : []),
-    fact('client_nonce', [content.client_nonce]),
-    fact('created_at', [String(content.created_at)]),
-    fact('op', [content.op.op]),
-  ];
-  return facts.concat(rosterOpFacts(content.op));
-}
-
-function rosterOpFacts(op: IrisProfileRosterOp): Fact[] {
+export function irisProfileRosterOpToIdentity(op: IrisProfileRosterOp): IdentityRosterOp {
   if (op.op === 'add_facet') {
-    return [
-      fact('facet_pubkey', [op.facet.pubkey]),
-      ...(op.facet.profile_id !== undefined ? [fact('facet_profile_id', [op.facet.profile_id])] : []),
-      ...(op.facet.purposes ?? []).map((purpose) => fact('facet_purpose', [purpose])),
-      ...capabilityFacts('facet_capability', op.facet.capabilities ?? {}),
-      fact('facet_added_at', [String(op.facet.added_at)]),
-      ...(op.facet.label !== undefined ? [fact('facet_label', [op.facet.label])] : []),
-    ];
-  }
-  if (op.op === 'tombstone_facet') {
-    return [
-      fact('target_pubkey', [op.pubkey]),
-      ...(op.reason !== undefined ? [fact('reason', [op.reason])] : []),
-    ];
-  }
-  if (op.op === 'set_capabilities') {
-    return [
-      fact('target_pubkey', [op.pubkey]),
-      ...capabilityFacts('capability', op.capabilities),
-    ];
-  }
-  return [
-    fact('key_epoch', [String(op.epoch)]),
-    ...Object.entries(op.wrapped_dck ?? {})
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([pubkey, wrapped]) => fact('wrapped_dck', [pubkey, wrapped])),
-  ];
-}
-
-function facetAcceptanceContentFacts(content: IrisProfileFacetAcceptanceContent): Fact[] {
-  return [
-    fact('type', [FACET_ACCEPTANCE_TYPE]),
-    fact('schema', [String(content.schema)]),
-    fact('facet_pubkey', [content.facet_pubkey]),
-    ...content.purposes.map((purpose) => fact('purpose', [purpose])),
-    ...(content.roster_op_id !== undefined ? [fact('roster_op_id', [content.roster_op_id])] : []),
-    fact('client_nonce', [content.client_nonce]),
-    fact('accepted_at', [String(content.accepted_at)]),
-  ];
-}
-
-function rosterOpContentFromFacts(op: FactOp): IrisProfileRosterOpContent {
-  requireType(op, ROSTER_OP_TYPE);
-  const schema = requiredInteger(op, 'schema');
-  if (schema !== IRIS_PROFILE_ROSTER_SCHEMA) {
-    throw new Error(`unsupported IrisProfile roster schema ${schema}`);
-  }
-  const content: IrisProfileRosterOpContent = {
-    schema,
-    profile_id: op.subject,
-    actor_pubkey: requiredScalar(op, 'actor_pubkey'),
-    ...(optionalInteger(op, 'actor_seq') !== undefined ? { actor_seq: optionalInteger(op, 'actor_seq') } : {}),
-    ...(op.prev.length ? { parents: op.prev } : {}),
-    client_nonce: requiredNonEmptyScalar(op, 'client_nonce'),
-    created_at: requiredInteger(op, 'created_at'),
-    op: rosterOpFromFacts(op),
-  };
-  return content;
-}
-
-function rosterOpFromFacts(op: FactOp): IrisProfileRosterOp {
-  const kind = requiredScalar(op, 'op');
-  if (kind === 'add_facet') {
-    const purposes = purposeValues(op, 'facet_purpose');
     return {
-      op: 'add_facet',
-      facet: {
-        pubkey: requiredScalar(op, 'facet_pubkey'),
-        ...(optionalScalar(op, 'facet_profile_id') !== undefined
-          ? { profile_id: optionalScalar(op, 'facet_profile_id') }
-          : {}),
-        ...(purposes.length ? { purposes } : {}),
-        capabilities: capabilitiesFromFacts(op, 'facet_capability'),
-        added_at: requiredInteger(op, 'facet_added_at'),
-        ...(optionalScalar(op, 'facet_label') !== undefined ? { label: optionalScalar(op, 'facet_label') } : {}),
+      op: 'add_key',
+      key: {
+        pubkey: requireHexPubkey(op.facet.pubkey, 'facet'),
+        ...(op.facet.profile_id !== undefined ? { subject: op.facet.profile_id } : {}),
+        purposes: (op.facet.purposes ?? []).map(irisPurposeToIdentity),
+        capabilities: irisCapabilitiesToIdentity(op.facet.capabilities ?? {}),
+        addedAt: op.facet.added_at,
+        ...(op.facet.label !== undefined ? { label: op.facet.label } : {}),
       },
     };
   }
-  if (kind === 'tombstone_facet') {
+  if (op.op === 'tombstone_facet') {
+    return {
+      op: 'tombstone_key',
+      pubkey: requireHexPubkey(op.pubkey, 'target'),
+      ...(op.reason !== undefined ? { reason: op.reason } : {}),
+    };
+  }
+  if (op.op === 'set_capabilities') {
+    return {
+      op: 'set_key_capabilities',
+      pubkey: requireHexPubkey(op.pubkey, 'target'),
+      capabilities: irisCapabilitiesToIdentity(op.capabilities),
+    };
+  }
+  if (op.op === 'rotate_key_epoch') {
+    return {
+      op: 'rotate_secret_epoch',
+      epoch: op.epoch,
+      wrappedSecrets: normalizeWrappedDck(op.wrapped_dck ?? {}),
+    };
+  }
+  return {
+    op: 'repair_secret_wraps',
+    epoch: op.epoch,
+    wrappedSecrets: normalizeWrappedDck(op.wrapped_dck ?? {}),
+  };
+}
+
+function identityRosterContentToIris(content: IdentityRosterOpContent): IrisProfileRosterOpContent {
+  if (content.schema !== IRIS_PROFILE_ROSTER_SCHEMA) {
+    throw new Error(`unsupported IrisProfile roster schema ${content.schema}`);
+  }
+  return {
+    schema: IRIS_PROFILE_ROSTER_SCHEMA,
+    profile_id: content.identity,
+    actor_pubkey: content.actorPubkey,
+    ...(content.actorSeq !== undefined ? { actor_seq: content.actorSeq } : {}),
+    ...(content.parents?.length ? { parents: content.parents.slice() } : {}),
+    client_nonce: content.clientNonce,
+    created_at: content.createdAt,
+    op: identityRosterOpToIrisProfile(content.op),
+  };
+}
+
+export function signedIrisProfileRosterOpToIdentity(
+  signed: SignedIrisProfileRosterOp,
+): SignedIdentityRosterOp {
+  return {
+    opId: signed.op_id,
+    signerPubkey: signed.signer_pubkey,
+    content: {
+      schema: signed.content.schema,
+      identity: signed.content.profile_id,
+      actorPubkey: signed.content.actor_pubkey,
+      ...(signed.content.actor_seq !== undefined ? { actorSeq: signed.content.actor_seq } : {}),
+      parents: signed.content.parents?.slice() ?? [],
+      clientNonce: signed.content.client_nonce,
+      createdAt: signed.content.created_at,
+      op: irisProfileRosterOpToIdentity(signed.content.op),
+    },
+  };
+}
+
+export function identityRosterProjectionToIris(
+  projection: IdentityRosterProjection,
+): IrisProfileRosterProjection {
+  return {
+    profile_id: projection.identity,
+    active_facets: Object.fromEntries(
+      Object.entries(projection.activeKeys).map(([pubkey, key]) => [
+        pubkey,
+        {
+          pubkey: key.pubkey,
+          ...(key.subject !== undefined ? { profile_id: key.subject } : {}),
+          ...(key.purposes.length ? { purposes: key.purposes.map(identityPurposeToIris) } : {}),
+          capabilities: identityCapabilitiesToIris(key.capabilities),
+          added_at: key.addedAt,
+          ...(key.label !== undefined ? { label: key.label } : {}),
+        },
+      ]),
+    ),
+    tombstones: Object.fromEntries(
+      Object.entries(projection.tombstones).map(([pubkey, tombstone]) => [
+        pubkey,
+        {
+          pubkey: tombstone.pubkey,
+          ...(tombstone.subject !== undefined ? { profile_id: tombstone.subject } : {}),
+          removed_by_pubkey: tombstone.removedByPubkey,
+          removed_at: tombstone.removedAt,
+          ...(tombstone.reason !== undefined ? { reason: tombstone.reason } : {}),
+        },
+      ]),
+    ),
+    key_epochs: Object.fromEntries(
+      Object.entries(projection.secretEpochs).map(([epoch, secretEpoch]) => [
+        epoch,
+        {
+          epoch: secretEpoch.epoch,
+          created_at: secretEpoch.createdAt,
+          signed_by_pubkey: secretEpoch.signedByPubkey,
+          wrapped_dck: secretEpoch.wrappedSecrets,
+        },
+      ]),
+    ),
+    accepted_op_ids: projection.acceptedOpIds,
+    rejected_op_ids: projection.rejectedOpIds,
+  };
+}
+
+export function identityRosterOpToIrisProfile(op: IdentityRosterOp): IrisProfileRosterOp {
+  if (op.op === 'add_key') {
+    const purposes = op.key.purposes.map(identityPurposeToIris);
+    return {
+      op: 'add_facet',
+      facet: {
+        pubkey: op.key.pubkey,
+        ...(op.key.subject !== undefined ? { profile_id: op.key.subject } : {}),
+        ...(purposes.length ? { purposes } : {}),
+        capabilities: identityCapabilitiesToIris(op.key.capabilities),
+        added_at: op.key.addedAt,
+        ...(op.key.label !== undefined ? { label: op.key.label } : {}),
+      },
+    };
+  }
+  if (op.op === 'tombstone_key') {
     return {
       op: 'tombstone_facet',
-      pubkey: requiredScalar(op, 'target_pubkey'),
-      ...(optionalScalar(op, 'reason') !== undefined ? { reason: optionalScalar(op, 'reason') } : {}),
+      pubkey: op.pubkey,
+      ...(op.reason !== undefined ? { reason: op.reason } : {}),
     };
   }
-  if (kind === 'set_capabilities') {
+  if (op.op === 'set_key_capabilities') {
     return {
       op: 'set_capabilities',
-      pubkey: requiredScalar(op, 'target_pubkey'),
-      capabilities: capabilitiesFromFacts(op, 'capability'),
+      pubkey: op.pubkey,
+      capabilities: identityCapabilitiesToIris(op.capabilities),
     };
   }
-  if (kind === 'rotate_key_epoch' || kind === 'repair_key_wraps') {
+  if (op.op === 'rotate_secret_epoch') {
     return {
-      op: kind,
-      epoch: requiredInteger(op, 'key_epoch'),
-      wrapped_dck: wrappedDckFromFacts(op),
+      op: 'rotate_key_epoch',
+      epoch: op.epoch,
+      wrapped_dck: op.wrappedSecrets,
     };
   }
-  throw new Error(`unsupported IrisProfile roster op ${kind}`);
-}
-
-function facetAcceptanceContentFromFacts(op: FactOp): IrisProfileFacetAcceptanceContent {
-  requireType(op, FACET_ACCEPTANCE_TYPE);
-  const schema = requiredInteger(op, 'schema');
-  if (schema !== IRIS_PROFILE_FACET_ACCEPTANCE_SCHEMA) {
-    throw new Error(`unsupported IrisProfile facet acceptance schema ${schema}`);
-  }
-  const content: IrisProfileFacetAcceptanceContent = {
-    schema,
-    profile_id: op.subject,
-    facet_pubkey: requiredScalar(op, 'facet_pubkey'),
-    purposes: purposeValues(op, 'purpose'),
-    ...(optionalScalar(op, 'roster_op_id') !== undefined
-      ? { roster_op_id: optionalScalar(op, 'roster_op_id') }
-      : {}),
-    client_nonce: requiredNonEmptyScalar(op, 'client_nonce'),
-    accepted_at: requiredInteger(op, 'accepted_at'),
+  return {
+    op: 'repair_key_wraps',
+    epoch: op.epoch,
+    wrapped_dck: op.wrappedSecrets,
   };
-  if (!isHex32(content.facet_pubkey)) {
-    throw new Error('facet acceptance pubkey is invalid');
-  }
-  if (content.purposes.length === 0) {
-    throw new Error('facet acceptance purposes must not be empty');
-  }
-  if (content.roster_op_id && !isHex32(content.roster_op_id)) {
-    throw new Error('facet acceptance roster op id is invalid');
-  }
-  return content;
 }
 
-function requireType(op: FactOp, expected: string): void {
-  const value = requiredScalar(op, 'type');
-  if (value !== expected) throw new Error(`unexpected IrisProfile fact event type ${value}`);
+function identityKeyAcceptanceContentToIris(
+  content: IdentityKeyAcceptanceContent,
+): IrisProfileFacetAcceptanceContent {
+  if (content.schema !== IRIS_PROFILE_FACET_ACCEPTANCE_SCHEMA) {
+    throw new Error(`unsupported IrisProfile facet acceptance schema ${content.schema}`);
+  }
+  return {
+    schema: IRIS_PROFILE_FACET_ACCEPTANCE_SCHEMA,
+    profile_id: content.identity,
+    facet_pubkey: content.keyPubkey,
+    purposes: sortPurposes(content.purposes.map(identityPurposeToIris)),
+    ...(content.rosterOpId !== undefined ? { roster_op_id: content.rosterOpId } : {}),
+    client_nonce: content.clientNonce,
+    accepted_at: content.acceptedAt,
+  };
 }
 
-function capabilityFacts(predicate: string, capabilities: IrisProfileCapabilities): Fact[] {
+function irisCapabilitiesToIdentity(capabilities: IrisProfileCapabilities): IdentityKeyCapability[] {
   const normalized = normalizeCapabilities(capabilities);
-  return CAPABILITY_KEYS
-    .filter((key) => normalized[key])
-    .map((key) => fact(predicate, [key]));
+  return [
+    ...(normalized.can_write_roots ? [IDENTITY_CAPABILITY_WRITE] : []),
+    ...(normalized.can_admin_profile ? [IDENTITY_CAPABILITY_ADMIN] : []),
+    ...(normalized.can_recover_app_keys ? [IDENTITY_CAPABILITY_RECOVER] : []),
+    ...(normalized.can_receive_key_wraps ? [IDENTITY_CAPABILITY_RECEIVE_SECRET_WRAPS] : []),
+    ...(normalized.can_decrypt_key_epochs ? [IDENTITY_CAPABILITY_DECRYPT_SECRET_EPOCHS] : []),
+  ].sort();
 }
 
-function capabilitiesFromFacts(op: FactOp, predicate: string): IrisProfileCapabilities {
-  const capabilities: IrisProfileCapabilities = {};
-  for (const value of scalarValues(op, predicate)) {
-    if (!isCapabilityKey(value)) throw new Error(`unsupported IrisProfile capability ${value}`);
-    capabilities[value] = true;
+function identityCapabilitiesToIris(capabilities: IdentityKeyCapability[]): IrisProfileCapabilities {
+  const iris: IrisProfileCapabilities = {};
+  for (const capability of capabilities) {
+    if (capability === IDENTITY_CAPABILITY_WRITE) iris.can_write_roots = true;
+    else if (capability === IDENTITY_CAPABILITY_ADMIN) iris.can_admin_profile = true;
+    else if (capability === IDENTITY_CAPABILITY_RECOVER) iris.can_recover_app_keys = true;
+    else if (capability === IDENTITY_CAPABILITY_RECEIVE_SECRET_WRAPS) iris.can_receive_key_wraps = true;
+    else if (capability === IDENTITY_CAPABILITY_DECRYPT_SECRET_EPOCHS) iris.can_decrypt_key_epochs = true;
+    else throw new Error(`unsupported IrisProfile capability ${capability}`);
   }
-  return normalizeCapabilities(capabilities);
+  return normalizeCapabilities(iris);
 }
 
-function purposeValues(op: FactOp, predicate: string): IrisProfileKeyPurpose[] {
-  const values = scalarValues(op, predicate);
-  if (values.length === 0) return [];
-  return sortPurposes(values.map((value) => {
-    if (!isPurpose(value)) throw new Error(`unsupported IrisProfile purpose ${value}`);
-    return value;
-  }));
+function irisPurposeToIdentity(purpose: IrisProfileKeyPurpose): IdentityKeyPurpose {
+  if (purpose === 'app_key') return IDENTITY_PURPOSE_APP;
+  if (purpose === 'recovery_phrase') return IDENTITY_PURPOSE_RECOVERY;
+  if (purpose === 'nip46_signer') return IDENTITY_PURPOSE_REMOTE_SIGNER;
+  return IDENTITY_PURPOSE_PROFILE;
 }
 
-function wrappedDckFromFacts(op: FactOp): Record<string, string> {
+function identityPurposeToIris(purpose: IdentityKeyPurpose): IrisProfileKeyPurpose {
+  if (purpose === IDENTITY_PURPOSE_APP) return 'app_key';
+  if (purpose === IDENTITY_PURPOSE_RECOVERY) return 'recovery_phrase';
+  if (purpose === IDENTITY_PURPOSE_REMOTE_SIGNER) return 'nip46_signer';
+  if (purpose === IDENTITY_PURPOSE_PROFILE) return 'social_profile';
+  throw new Error(`unsupported IrisProfile purpose ${purpose}`);
+}
+
+function normalizeWrappedDck(wrappedDck: Record<string, string>): Record<string, string> {
   return Object.fromEntries(
-    valueTuples(op, 'wrapped_dck').map((values) => {
-      if (values.length !== 2) throw new Error('wrapped_dck fact must have pubkey and wrapped value');
-      return values as [string, string];
-    }).sort(([left], [right]) => left.localeCompare(right)),
+    Object.entries(wrappedDck)
+      .map(([pubkey, wrapped]) => [requireHexPubkey(pubkey, 'wrapped DCK recipient'), wrapped] as const)
+      .sort(([left], [right]) => left.localeCompare(right)),
   );
 }
 
-function requiredScalar(op: FactOp, predicate: string): string {
-  const value = optionalScalar(op, predicate);
-  if (value === undefined) throw new Error(`missing IrisProfile fact ${predicate}`);
-  return value;
-}
-
-function requiredNonEmptyScalar(op: FactOp, predicate: string): string {
-  const value = requiredScalar(op, predicate);
-  if (!value) throw new Error(`IrisProfile fact ${predicate} must not be empty`);
-  return value;
-}
-
-function optionalScalar(op: FactOp, predicate: string): string | undefined {
-  const values = valueTuples(op, predicate);
-  if (values.length === 0) return undefined;
-  if (values.length !== 1 || values[0].length !== 1) {
-    throw new Error(`IrisProfile fact ${predicate} must be a single scalar`);
-  }
-  return values[0][0];
-}
-
-function scalarValues(op: FactOp, predicate: string): string[] {
-  return valueTuples(op, predicate).map((values) => {
-    if (values.length !== 1) throw new Error(`IrisProfile fact ${predicate} must be scalar`);
-    return values[0];
-  });
-}
-
-function requiredInteger(op: FactOp, predicate: string): number {
-  const value = requiredScalar(op, predicate);
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || String(parsed) !== value) {
-    throw new Error(`IrisProfile fact ${predicate} must be an integer`);
-  }
-  return parsed;
-}
-
-function optionalInteger(op: FactOp, predicate: string): number | undefined {
-  const value = optionalScalar(op, predicate);
-  if (value === undefined) return undefined;
-  const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed) || String(parsed) !== value) {
-    throw new Error(`IrisProfile fact ${predicate} must be an integer`);
-  }
-  return parsed;
-}
-
-function valueTuples(op: FactOp, predicate: string): string[][] {
-  return op.facts
-    .filter((item) => item.predicate === predicate)
-    .map((item) => item.values);
-}
-
-function isCapabilityKey(value: string): value is CapabilityKey {
-  return CAPABILITY_KEYS.includes(value as CapabilityKey);
-}
-
-function isPurpose(value: string): value is IrisProfileKeyPurpose {
-  return PURPOSES.includes(value as IrisProfileKeyPurpose);
+function requireHexPubkey(value: string, label: string): string {
+  const normalized = normalizeHexPubkey(value);
+  if (!normalized) throw new Error(`${label} pubkey must be 64-char hex`);
+  return normalized;
 }

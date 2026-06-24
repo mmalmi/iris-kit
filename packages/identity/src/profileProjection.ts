@@ -1,9 +1,14 @@
+import { projectIdentityRoster, type SignedIdentityRosterOp } from 'nostr-social-graph';
 import type {
   IrisProfileId,
   IrisProfileRosterProjection,
   IrisProfileTombstone,
   SignedIrisProfileRosterOp,
 } from './profile.ts';
+import {
+  identityRosterProjectionToIris,
+  signedIrisProfileRosterOpToIdentity,
+} from './profileEvents.ts';
 import { signedIrisProfileRosterOpIsValid } from './profileValidation.ts';
 
 export function irisProfileRosterParentIds(ops: SignedIrisProfileRosterOp[]): string[] {
@@ -15,29 +20,21 @@ export function projectIrisProfileRoster(
   profileId: IrisProfileId,
   ops: SignedIrisProfileRosterOp[],
 ): IrisProfileRosterProjection {
-  const projection: IrisProfileRosterProjection = {
-    profile_id: profileId,
-    active_facets: {},
-    tombstones: {},
-    key_epochs: {},
-    accepted_op_ids: [],
-    rejected_op_ids: [],
-  };
+  const valid: SignedIdentityRosterOp[] = [];
+  const rejected: string[] = [];
   const sorted = ops
     .filter((op) => op.content.profile_id === profileId)
     .slice()
     .sort((a, b) => (a.content.created_at - b.content.created_at) || a.op_id.localeCompare(b.op_id));
   for (const signed of sorted) {
     if (!signedIrisProfileRosterOpIsValid(signed)) {
-      projection.rejected_op_ids.push(signed.op_id);
+      rejected.push(signed.op_id);
       continue;
     }
-    if (!applyRosterOp(projection, signed)) {
-      projection.rejected_op_ids.push(signed.op_id);
-      continue;
-    }
-    projection.accepted_op_ids.push(signed.op_id);
+    valid.push(signedIrisProfileRosterOpToIdentity(signed));
   }
+  const projection = identityRosterProjectionToIris(projectIdentityRoster(profileId, valid));
+  projection.rejected_op_ids = rejected.concat(projection.rejected_op_ids);
   return projection;
 }
 
@@ -46,6 +43,23 @@ export function applyRosterOp(
   signed: SignedIrisProfileRosterOp,
 ): boolean {
   const op = signed.content.op;
+  const signer = signed.signer_pubkey;
+  const isBootstrap = projection.accepted_op_ids.length === 0
+    && op.op === 'add_facet'
+    && op.facet.pubkey === signer
+    && Boolean(op.facet.capabilities?.can_admin_profile);
+  const canAdmin = isBootstrap || Boolean(projection.active_facets[signer]?.capabilities?.can_admin_profile);
+  const canRecover = Boolean(projection.active_facets[signer]?.capabilities?.can_recover_app_keys);
+  const canRecoverRoster = canRecover && (
+    (op.op === 'add_facet' && !op.facet.capabilities?.can_admin_profile)
+    || op.op === 'tombstone_facet'
+    || op.op === 'rotate_key_epoch'
+    || op.op === 'repair_key_wraps'
+  );
+  const canRepairEpoch = op.op === 'repair_key_wraps'
+    && projection.key_epochs[String(op.epoch)]?.signed_by_pubkey === signer;
+  if (!canAdmin && !canRecoverRoster && !canRepairEpoch) return false;
+
   if (op.op === 'add_facet') {
     if (projection.tombstones[op.facet.pubkey]) return false;
     projection.active_facets[op.facet.pubkey] ??= {

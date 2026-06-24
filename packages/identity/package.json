@@ -49,7 +49,7 @@
     "test": "node --test src/*.test.mjs"
   },
   "dependencies": {
-    "nostr-social-graph": "http://iris.localhost:17321/npub1xdhnr9mrv47kkrn95k6cwecearydeh8e895990n3acntwvmgk2dsdeeycm/packages%2Fnostr-social-graph/1.0.37-fact-events.0/nostr-social-graph-1.0.37-fact-events.0.tgz",
+    "nostr-social-graph": "link:../../../nostr-social-graph/ts",
     "nostr-tools": "2.23.5"
   }
 }

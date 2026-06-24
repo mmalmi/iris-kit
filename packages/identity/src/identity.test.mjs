@@ -158,10 +158,10 @@ test('roster ops are signed fact events', () => {
   assert.equal(event.kind, KIND_IRIS_PROFILE_ROSTER_OP);
   assert.equal(event.content, '');
   assert.deepEqual(event.tags.find((tag) => tag[0] === 'i' && tag[2] === 'subject'), ['i', profileId, 'subject']);
-  assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'iris_profile_roster_op'));
-  assert.ok(event.tags.some((tag) => tag[0] === 'op' && tag[1] === 'add_facet'));
-  assert.ok(event.tags.some((tag) => tag[0] === 'facet_pubkey' && tag[1] === admin));
-  assert.ok(event.tags.some((tag) => tag[0] === 'facet_capability' && tag[1] === 'can_admin_profile'));
+  assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'nostr_identity_roster_op'));
+  assert.ok(event.tags.some((tag) => tag[0] === 'op' && tag[1] === 'add_key'));
+  assert.ok(event.tags.some((tag) => tag[0] === 'key_pubkey' && tag[1] === admin));
+  assert.ok(event.tags.some((tag) => tag[0] === 'key_capability' && tag[1] === 'admin'));
   assert.equal(signed.content.op.op, 'add_facet');
   assert.equal(signed.content.op.facet.label, 'Laptop');
 });
@@ -182,9 +182,9 @@ test('facet acceptances are signed fact events', () => {
   assert.equal(event.kind, KIND_IRIS_PROFILE_FACET_ACCEPTANCE);
   assert.equal(event.content, '');
   assert.deepEqual(event.tags.find((tag) => tag[0] === 'i' && tag[2] === 'subject'), ['i', profileId, 'subject']);
-  assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'iris_profile_facet_acceptance'));
-  assert.ok(event.tags.some((tag) => tag[0] === 'facet_pubkey' && tag[1] === facet));
-  assert.ok(event.tags.some((tag) => tag[0] === 'purpose' && tag[1] === 'app_key'));
+  assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'nostr_identity_key_acceptance'));
+  assert.ok(event.tags.some((tag) => tag[0] === 'key_pubkey' && tag[1] === facet));
+  assert.ok(event.tags.some((tag) => tag[0] === 'purpose' && tag[1] === 'app'));
   assert.equal(acceptance.content.roster_op_id, 'a'.repeat(64));
 });
 
@@ -234,7 +234,7 @@ test('fact roster ops round trip all roster mutation shapes', () => {
   }
 });
 
-test('signed non-admin roster additions remain projectable for current web compatibility', () => {
+test('signed non-admin roster additions are rejected by the neutral identity graph', () => {
   const adminSecret = generateSecretKey();
   const admin = getPublicKey(adminSecret);
   const deviceSecret = generateSecretKey();
@@ -290,8 +290,9 @@ test('signed non-admin roster additions remain projectable for current web compa
 
   const projection = projectIrisProfileRoster(profileId, [bootstrap, addDevice, rogue]);
 
-  assert.deepEqual(projection.accepted_op_ids, [bootstrap.op_id, addDevice.op_id, rogue.op_id]);
-  assert.deepEqual(projection.rejected_op_ids, []);
+  assert.deepEqual(projection.accepted_op_ids, [bootstrap.op_id, addDevice.op_id]);
+  assert.deepEqual(projection.rejected_op_ids, [rogue.op_id]);
+  assert.equal(projection.active_facets[other], undefined);
 });
 
 test('representative profile uses latest kind 0 event from active identity authors', () => {
@@ -363,6 +364,8 @@ test('local identity session creates a UUID profile with an active AppKey', () =
 test('nsec login attaches a new AppKey and runs the secret rewrap hook', async () => {
   const adminSecret = generateSecretKey();
   const admin = getPublicKey(adminSecret);
+  const recoverySecret = generateSecretKey();
+  const recovery = getPublicKey(recoverySecret);
   const appKeySecretKey = generateSecretKey();
   const bootstrap = signIrisProfileRosterOp({
     signerSecretKey: adminSecret,
@@ -385,12 +388,32 @@ test('nsec login attaches a new AppKey and runs the secret rewrap hook', async (
       },
     },
   });
-  const signer = createIrisIdentitySignerFromNsec(nip19.nsecEncode(adminSecret));
+  const addRecovery = signIrisProfileRosterOp({
+    signerSecretKey: adminSecret,
+    profileId,
+    parents: [bootstrap.op_id],
+    createdAt: 11,
+    clientNonce: 'add-recovery-nsec',
+    op: {
+      op: 'add_facet',
+      facet: {
+        pubkey: recovery,
+        purposes: ['recovery_phrase'],
+        capabilities: {
+          can_recover_app_keys: true,
+          can_decrypt_key_epochs: true,
+        },
+        added_at: 11,
+        label: 'Recovery nsec',
+      },
+    },
+  });
+  const signer = createIrisIdentitySignerFromNsec(nip19.nsecEncode(recoverySecret));
   const rewrapCalls = [];
   const { attachment, session } = await createAttachedIrisIdentitySession({
     profileId,
     signer,
-    rosterOps: [bootstrap],
+    rosterOps: [bootstrap, addRecovery],
     appKeySecretKey,
     createdAt: 50,
     clientNonce: 'attach-browser',
@@ -407,10 +430,10 @@ test('nsec login attaches a new AppKey and runs the secret rewrap hook', async (
   });
   const projection = projectIrisProfileRoster(profileId, session.rosterOps);
 
-  assert.equal(attachment.addedByPubkey, admin);
+  assert.equal(attachment.addedByPubkey, recovery);
   assert.equal(attachment.appKeyPubkey, getPublicKey(appKeySecretKey));
   assert.equal(attachment.appKeyNsec, nip19.nsecEncode(appKeySecretKey));
-  assert.equal(attachment.rosterOp.signer_pubkey, admin);
+  assert.equal(attachment.rosterOp.signer_pubkey, recovery);
   assert.equal(attachment.rosterOp.content.op.facet.label, 'Browser AppKey');
   assert.equal(attachment.facetAcceptance.signer_pubkey, attachment.appKeyPubkey);
   assert.equal(attachment.facetAcceptance.content.roster_op_id, attachment.rosterOp.op_id);
@@ -418,8 +441,9 @@ test('nsec login attaches a new AppKey and runs the secret rewrap hook', async (
   assert.equal(session.status, 'active');
   assert.equal(session.appKeyPubkey, attachment.appKeyPubkey);
   assert.equal(rewrapCalls.length, 1);
-  assert.equal(rewrapCalls[0].existingRosterOps.length, 1);
+  assert.equal(rewrapCalls[0].existingRosterOps.length, 2);
   assert.equal(rewrapCalls[0].projectedRoster.active_facets[admin].capabilities?.can_admin_profile, true);
+  assert.equal(rewrapCalls[0].projectedRoster.active_facets[recovery].capabilities?.can_recover_app_keys, true);
   assert.deepEqual(attachment.rewrapResults, [{
     secretId: 'drive-dck',
     status: 'rewrapped',
@@ -483,9 +507,11 @@ test('seed phrase recovery login can attach a new AppKey', async () => {
   assert.equal(projection.active_facets[attachment.appKeyPubkey].capabilities?.can_write_roots, true);
 });
 
-test('NIP-07 and NIP-46 signers can attach an AppKey through the same flow', async () => {
+test('NIP-07 and NIP-46 recovery signers can attach an AppKey through the same flow', async () => {
   const adminSecret = generateSecretKey();
   const admin = getPublicKey(adminSecret);
+  const recoverySecret = generateSecretKey();
+  const recovery = getPublicKey(recoverySecret);
   const bootstrap = signIrisProfileRosterOp({
     signerSecretKey: adminSecret,
     profileId,
@@ -501,17 +527,36 @@ test('NIP-07 and NIP-46 signers can attach an AppKey through the same flow', asy
       },
     },
   });
+  const addRecovery = signIrisProfileRosterOp({
+    signerSecretKey: adminSecret,
+    profileId,
+    parents: [bootstrap.op_id],
+    createdAt: 11,
+    clientNonce: 'add-recovery-remote',
+    op: {
+      op: 'add_facet',
+      facet: {
+        pubkey: recovery,
+        purposes: ['nip46_signer'],
+        capabilities: {
+          can_recover_app_keys: true,
+          can_decrypt_key_epochs: true,
+        },
+        added_at: 11,
+      },
+    },
+  });
   const remoteSigner = {
-    getPublicKey: async () => admin,
+    getPublicKey: async () => recovery,
     signEvent: async (draft) => finalizeEvent({
       ...draft,
       tags: draft.tags.map((tag) => tag.slice()),
-    }, adminSecret),
+    }, recoverySecret),
   };
   const nip07Attachment = await attachIrisAppKeyToProfile({
     profileId,
     signer: createIrisIdentitySignerFromNip07(remoteSigner),
-    rosterOps: [bootstrap],
+    rosterOps: [bootstrap, addRecovery],
     appKeySecretKey: generateSecretKey(),
     createdAt: 70,
     clientNonce: 'nip07-attach',
@@ -519,14 +564,14 @@ test('NIP-07 and NIP-46 signers can attach an AppKey through the same flow', asy
   const nip46Attachment = await attachIrisAppKeyToProfile({
     profileId,
     signer: createIrisIdentitySignerFromNip46(remoteSigner),
-    rosterOps: [bootstrap],
+    rosterOps: [bootstrap, addRecovery],
     appKeySecretKey: generateSecretKey(),
     createdAt: 71,
     clientNonce: 'nip46-attach',
   });
 
-  assert.equal(nip07Attachment.addedByPubkey, admin);
-  assert.equal(nip46Attachment.addedByPubkey, admin);
+  assert.equal(nip07Attachment.addedByPubkey, recovery);
+  assert.equal(nip46Attachment.addedByPubkey, recovery);
   assert.equal(nip07Attachment.rosterOp.content.op.op, 'add_facet');
   assert.equal(nip46Attachment.rosterOp.content.op.op, 'add_facet');
 });
