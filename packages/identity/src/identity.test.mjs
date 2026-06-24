@@ -163,6 +163,7 @@ test('roster ops are signed fact events', () => {
   assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'nostr_identity_roster_op'));
   assert.ok(event.tags.some((tag) => tag[0] === 'op' && tag[1] === 'add_key'));
   assert.ok(event.tags.some((tag) => tag[0] === 'key_pubkey' && tag[1] === admin));
+  assert.ok(event.tags.some((tag) => tag[0] === 'p' && tag[1] === admin));
   assert.ok(event.tags.some((tag) => tag[0] === 'key_capability' && tag[1] === 'admin'));
   assert.equal(signed.content.op.op, 'add_facet');
   assert.equal(signed.content.op.facet.label, 'Laptop');
@@ -186,6 +187,7 @@ test('facet acceptances are signed fact events', () => {
   assert.deepEqual(event.tags.find((tag) => tag[0] === 'i' && tag[2] === 'subject'), ['i', profileId, 'subject']);
   assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'nostr_identity_key_acceptance'));
   assert.ok(event.tags.some((tag) => tag[0] === 'key_pubkey' && tag[1] === facet));
+  assert.ok(event.tags.some((tag) => tag[0] === 'p' && tag[1] === facet));
   assert.ok(event.tags.some((tag) => tag[0] === 'purpose' && tag[1] === 'app'));
   assert.equal(acceptance.content.roster_op_id, 'a'.repeat(64));
 });
