@@ -13,6 +13,10 @@
       "types": "./src/appKeyAttach.ts",
       "default": "./src/appKeyAttach.ts"
     },
+    "./appKeyRemove": {
+      "types": "./src/appKeyRemove.ts",
+      "default": "./src/appKeyRemove.ts"
+    },
     "./deviceLink": {
       "types": "./src/deviceLink.ts",
       "default": "./src/deviceLink.ts"

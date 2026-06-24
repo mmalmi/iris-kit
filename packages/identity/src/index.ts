@@ -1,4 +1,5 @@
 export * from './appKeyAttach.ts';
+export * from './appKeyRemove.ts';
 export * from './deviceLink.ts';
 export * from './profile.ts';
 export * from './profileDtags.ts';

@@ -34,7 +34,7 @@ export interface IrisAppKeySecretRewrapContext {
 
 export interface IrisAppKeySecretRewrapResult {
   secretId: string;
-  status: 'rewrapped' | 'skipped' | 'needs_user_action';
+  status: 'rewrapped' | 'rotated' | 'skipped' | 'needs_user_action';
   epoch?: number;
   wrappedForAppKey?: string;
   detail?: string;

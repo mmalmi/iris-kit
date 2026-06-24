@@ -20,10 +20,12 @@ import {
   parseDeviceLinkInvite,
   projectIrisProfileRoster,
   representativeProfileAuthors,
+  removeIrisAppKeyFromProfile,
   selectLatestRepresentativeProfileEvent,
   signIrisProfileFacetAcceptance,
   signIrisProfileRosterOp,
   signerCanAttachAppKey,
+  signerCanRemoveAppKey,
   restoreIrisIdentitySession,
   serializeIrisIdentitySession,
 } from './index.ts';
@@ -574,6 +576,129 @@ test('NIP-07 and NIP-46 recovery signers can attach an AppKey through the same f
   assert.equal(nip46Attachment.addedByPubkey, recovery);
   assert.equal(nip07Attachment.rosterOp.content.op.op, 'add_facet');
   assert.equal(nip46Attachment.rosterOp.content.op.op, 'add_facet');
+});
+
+test('recovery signers can remove AppKeys and run the secret rewrap hook', async () => {
+  const adminSecret = generateSecretKey();
+  const admin = getPublicKey(adminSecret);
+  const recoverySecret = generateSecretKey();
+  const recovery = getPublicKey(recoverySecret);
+  const appKeySecret = generateSecretKey();
+  const appKey = getPublicKey(appKeySecret);
+  const bootstrap = signIrisProfileRosterOp({
+    signerSecretKey: adminSecret,
+    profileId,
+    createdAt: 10,
+    clientNonce: 'bootstrap-admin',
+    op: {
+      op: 'add_facet',
+      facet: {
+        pubkey: admin,
+        purposes: ['app_key'],
+        capabilities: {
+          can_write_roots: true,
+          can_admin_profile: true,
+          can_receive_key_wraps: true,
+          can_decrypt_key_epochs: true,
+        },
+        added_at: 10,
+      },
+    },
+  });
+  const addRecovery = signIrisProfileRosterOp({
+    signerSecretKey: adminSecret,
+    profileId,
+    parents: [bootstrap.op_id],
+    createdAt: 11,
+    clientNonce: 'add-recovery',
+    op: {
+      op: 'add_facet',
+      facet: {
+        pubkey: recovery,
+        purposes: ['recovery_phrase'],
+        capabilities: {
+          can_recover_app_keys: true,
+          can_receive_key_wraps: true,
+          can_decrypt_key_epochs: true,
+        },
+        added_at: 11,
+      },
+    },
+  });
+  const addAppKey = signIrisProfileRosterOp({
+    signerSecretKey: adminSecret,
+    profileId,
+    parents: [bootstrap.op_id, addRecovery.op_id],
+    createdAt: 12,
+    clientNonce: 'add-phone',
+    op: {
+      op: 'add_facet',
+      facet: {
+        pubkey: appKey,
+        purposes: ['app_key'],
+        capabilities: {
+          can_write_roots: true,
+          can_receive_key_wraps: true,
+          can_decrypt_key_epochs: true,
+        },
+        added_at: 12,
+        label: 'Phone',
+      },
+    },
+  });
+  const rosterOps = [bootstrap, addRecovery, addAppKey];
+  const projection = projectIrisProfileRoster(profileId, rosterOps);
+  const hookCalls = [];
+
+  assert.equal(signerCanRemoveAppKey(projection, recovery, appKey), true);
+  assert.equal(signerCanRemoveAppKey(projection, appKey, admin), false);
+
+  const removal = await removeIrisAppKeyFromProfile({
+    profileId,
+    signer: createIrisIdentitySignerFromNsec(nip19.nsecEncode(recoverySecret)),
+    rosterOps,
+    appKeyPubkey: appKey,
+    createdAt: 13,
+    clientNonce: 'remove-phone',
+    reason: 'lost device',
+    rewrapSecrets: (context) => {
+      hookCalls.push(context);
+      return [{
+        secretId: 'drive-dck',
+        status: 'rotated',
+        epoch: 2,
+      }];
+    },
+  });
+  const afterRemoval = projectIrisProfileRoster(profileId, [...rosterOps, removal.rosterOp]);
+
+  assert.equal(removal.removedByPubkey, recovery);
+  assert.deepEqual(removal.rosterOp.content.op, {
+    op: 'tombstone_facet',
+    pubkey: appKey,
+    reason: 'lost device',
+  });
+  assert.equal(afterRemoval.active_facets[appKey], undefined);
+  assert.equal(afterRemoval.tombstones[appKey].removed_by_pubkey, recovery);
+  assert.equal(hookCalls.length, 1);
+  assert.equal(hookCalls[0].projectedRoster.active_facets[appKey], undefined);
+  assert.equal(hookCalls[0].projectedRoster.tombstones[appKey].reason, 'lost device');
+  assert.deepEqual(removal.rewrapResults, [{
+    secretId: 'drive-dck',
+    status: 'rotated',
+    epoch: 2,
+  }]);
+  await assert.rejects(
+    removeIrisAppKeyFromProfile({
+      profileId,
+      signer: createIrisIdentitySignerFromNsec(nip19.nsecEncode(appKeySecret)),
+      rosterOps,
+      appKeyPubkey: admin,
+      createdAt: 14,
+      clientNonce: 'writer-remove-admin',
+    }),
+    /not authorized to remove this AppKey/,
+  );
 });
 
 test('recovery signers expose NIP-44 encryption when the underlying method can decrypt secrets', async () => {
