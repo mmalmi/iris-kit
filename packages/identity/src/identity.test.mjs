@@ -303,6 +303,7 @@ test('representative profile uses latest kind 0 event from active identity autho
   const adminSecret = generateSecretKey();
   const admin = getPublicKey(adminSecret);
   const social = getPublicKey(generateSecretKey());
+  const recovery = getPublicKey(generateSecretKey());
   const bootstrap = signIrisProfileRosterOp({
     signerSecretKey: adminSecret,
     profileId,
@@ -334,17 +335,34 @@ test('representative profile uses latest kind 0 event from active identity autho
       },
     },
   }, 'op-social');
-  const projection = projectIrisProfileRoster(profileId, [bootstrap, addSocial]);
+  const addRecovery = signIrisProfileRosterOp({
+    signerSecretKey: adminSecret,
+    profileId,
+    parents: [bootstrap.op_id],
+    createdAt: 12,
+    clientNonce: 'recovery',
+    op: {
+      op: 'add_facet',
+      facet: {
+        pubkey: recovery,
+        purposes: ['recovery_phrase'],
+        capabilities: { can_recover_app_keys: true },
+        added_at: 12,
+      },
+    },
+  }, 'op-recovery');
+  const projection = projectIrisProfileRoster(profileId, [bootstrap, addSocial, addRecovery]);
 
-  assert.deepEqual(representativeProfileAuthors(projection), [admin, social].sort());
+  assert.deepEqual(representativeProfileAuthors(projection), [admin, recovery, social].sort());
   const selected = selectLatestRepresentativeProfileEvent(projection, [
     { kind: 0, pubkey: social, created_at: 12, content: '{"name":"Old"}' },
     { kind: 0, pubkey: admin, created_at: 20, content: '{"name":"Fresh"}' },
+    { kind: 0, pubkey: recovery, created_at: 30, content: '{"name":"Recovery Fresh"}' },
     { kind: 1, pubkey: social, created_at: 30, content: 'not a profile' },
   ]);
 
-  assert.equal(selected?.pubkey, admin);
-  assert.equal(selected?.profile.name, 'Fresh');
+  assert.equal(selected?.pubkey, recovery);
+  assert.equal(selected?.profile.name, 'Recovery Fresh');
 });
 
 test('local identity session creates a UUID profile with an active AppKey', () => {

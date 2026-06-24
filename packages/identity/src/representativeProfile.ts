@@ -20,10 +20,6 @@ export function representativeProfileAuthors(
   projection: IrisProfileRosterProjection,
 ): string[] {
   return Object.values(projection.active_facets)
-    .filter((facet) => {
-      const purposes = facet.purposes ?? [];
-      return purposes.includes('social_profile') || purposes.includes('app_key');
-    })
     .map((facet) => facet.pubkey)
     .filter((pubkey, index, all) => all.indexOf(pubkey) === index)
     .sort();

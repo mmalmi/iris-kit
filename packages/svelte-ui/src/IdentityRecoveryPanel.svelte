@@ -14,8 +14,17 @@
     submitLabel?: string;
     error?: string;
     nostrAvailable?: boolean;
+    showCreateNew?: boolean;
+    createNewTitle?: string;
+    createNewDescription?: string;
+    createNewLabel?: string;
+    createNewBusy?: boolean;
+    createNewDisabled?: boolean;
+    createNewTestId?: string;
     onMethodChange?: (method: IdentityRecoveryMethod) => void;
     onSubmit?: (request: IdentityRecoveryRequest) => void | Promise<void>;
+    onCreateNew?: () => void | Promise<void>;
+    onCreateNewBack?: () => void;
     class?: string;
   }
 
@@ -26,8 +35,17 @@
     submitLabel = 'Continue',
     error = '',
     nostrAvailable = true,
+    showCreateNew = false,
+    createNewTitle = 'No identity found',
+    createNewDescription = '',
+    createNewLabel = 'Create new',
+    createNewBusy = false,
+    createNewDisabled = false,
+    createNewTestId = 'identity-recovery-create-new',
     onMethodChange = undefined,
     onSubmit = undefined,
+    onCreateNew = undefined,
+    onCreateNewBack = undefined,
     class: className = '',
   }: Props = $props();
 
@@ -38,8 +56,20 @@
   let seedPassphrase = $state('');
   let nip46Connection = $state('');
   let nip46Relay = $state('');
+  let submittingImmediate = $state(false);
+  let creatingImmediate = $state(false);
 
   const errorId = `iris-identity-recovery-${Math.random().toString(36).slice(2)}-error`;
+  const effectiveCreateNewBusy = $derived(createNewBusy || creatingImmediate);
+  const effectiveDisabled = $derived(disabled || submittingImmediate || effectiveCreateNewBusy);
+  const canCreateNew = $derived(
+    Boolean(onCreateNew)
+      && showCreateNew
+      && !disabled
+      && !submittingImmediate
+      && !createNewDisabled
+      && !effectiveCreateNewBusy,
+  );
   const visibleMethods = $derived(
     IDENTITY_RECOVERY_METHODS.filter((option) => option.id !== 'nip07' || nostrAvailable),
   );
@@ -53,7 +83,7 @@
     ...(nip46Relay ? { nip46Relay } : {}),
   } : null);
   const canSubmit = $derived(
-    !disabled
+    !effectiveDisabled
       && request !== null
       && (selected !== 'nip07' || nostrAvailable)
       && identityRecoveryRequestHasInput(request),
@@ -67,19 +97,36 @@
   });
 
   $effect(() => {
-    if (selected === 'nip07' && !nostrAvailable) {
+    if (selected === 'nip07') {
       selected = null;
     }
   });
 
-  function selectMethod(nextMethod: IdentityRecoveryMethod): void {
-    selected = nextMethod;
+  async function selectMethod(nextMethod: IdentityRecoveryMethod): Promise<void> {
+    if (effectiveDisabled) return;
     onMethodChange?.(nextMethod);
+    if (nextMethod === 'nip07') {
+      if (!nostrAvailable || submittingImmediate) return;
+      submittingImmediate = true;
+      try {
+        await onSubmit?.({ method: 'nip07' });
+      } finally {
+        submittingImmediate = false;
+      }
+      return;
+    }
+    selected = nextMethod;
   }
 
   function clearMethod(): void {
-    if (disabled) return;
+    if (effectiveDisabled) return;
     selected = null;
+  }
+
+  function dismissCreateNew(): void {
+    if (effectiveDisabled) return;
+    selected = null;
+    onCreateNewBack?.();
   }
 
   async function submit(event: SubmitEvent): Promise<void> {
@@ -87,10 +134,62 @@
     if (!canSubmit || !request) return;
     await onSubmit?.(normalizeIdentityRecoveryRequest(request));
   }
+
+  async function createNew(): Promise<void> {
+    if (!canCreateNew || !onCreateNew) return;
+    creatingImmediate = true;
+    try {
+      await onCreateNew();
+    } finally {
+      creatingImmediate = false;
+    }
+  }
 </script>
 
 <form class={`iris-identity-recovery ${className}`.trim()} onsubmit={submit}>
-  {#if !selected}
+  {#if showCreateNew}
+    <div class="recovery-result" data-testid="identity-recovery-create-new-view">
+      <div class="selected-method">
+        <button
+          type="button"
+          class="method-back"
+          aria-label="Choose recovery method"
+          title="Back"
+          onclick={dismissCreateNew}
+          disabled={effectiveDisabled}
+        >
+          <span class="i-lucide-chevron-left" aria-hidden="true"></span>
+        </button>
+        <span class="i-lucide-circle-alert" aria-hidden="true"></span>
+        <span>{createNewTitle}</span>
+      </div>
+
+      {#if createNewDescription}
+        <p class="result-description">{createNewDescription}</p>
+      {/if}
+
+      {#if error}
+        <p class="field-error" id={errorId}>{error}</p>
+      {/if}
+
+      {#if onCreateNew}
+        <button
+          class="create-new-button"
+          type="button"
+          disabled={!canCreateNew}
+          data-testid={createNewTestId}
+          onclick={createNew}
+        >
+          {#if effectiveCreateNewBusy}
+            <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
+          {:else}
+            <span class="i-lucide-plus" aria-hidden="true"></span>
+          {/if}
+          <span>{createNewLabel}</span>
+        </button>
+      {/if}
+    </div>
+  {:else if !selected}
     <div
       class:column={methodLayout === 'column'}
       class="recovery-methods"
@@ -102,13 +201,16 @@
           type="button"
           aria-pressed="false"
           onclick={() => selectMethod(option.id)}
-          disabled={disabled}
+          disabled={effectiveDisabled}
         >
           <span class={option.icon} aria-hidden="true"></span>
           <span>{option.label}</span>
         </button>
       {/each}
     </div>
+    {#if error}
+      <p class="field-error" id={errorId}>{error}</p>
+    {/if}
   {:else}
     <div class="selected-method">
       <button
@@ -117,7 +219,7 @@
         aria-label="Choose recovery method"
         title="Back"
         onclick={clearMethod}
-        disabled={disabled}
+        disabled={effectiveDisabled}
       >
         <span class="i-lucide-chevron-left" aria-hidden="true"></span>
       </button>
@@ -137,7 +239,7 @@
           autocomplete="off"
           autocapitalize="none"
           spellcheck="false"
-          disabled={disabled}
+          disabled={effectiveDisabled}
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={error ? errorId : undefined}
           oninput={(event) => (nsec = (event.currentTarget as HTMLInputElement).value)}
@@ -152,7 +254,7 @@
           autocomplete="off"
           autocapitalize="none"
           spellcheck="false"
-          disabled={disabled}
+          disabled={effectiveDisabled}
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={error ? errorId : undefined}
           oninput={(event) => (seedWords = (event.currentTarget as HTMLTextAreaElement).value)}
@@ -164,7 +266,7 @@
           type="password"
           value={seedPassphrase}
           autocomplete="off"
-          disabled={disabled}
+          disabled={effectiveDisabled}
           oninput={(event) => (seedPassphrase = (event.currentTarget as HTMLInputElement).value)}
         />
       </label>
@@ -178,7 +280,7 @@
           autocomplete="off"
           autocapitalize="none"
           spellcheck="false"
-          disabled={disabled}
+          disabled={effectiveDisabled}
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={error ? errorId : undefined}
           oninput={(event) => (nip46Connection = (event.currentTarget as HTMLInputElement).value)}
@@ -191,7 +293,7 @@
           value={nip46Relay}
           placeholder="wss://..."
           autocomplete="off"
-          disabled={disabled}
+          disabled={effectiveDisabled}
           oninput={(event) => (nip46Relay = (event.currentTarget as HTMLInputElement).value)}
         />
       </label>
@@ -206,7 +308,7 @@
     {/if}
 
     <button class="submit-button" type="submit" disabled={!canSubmit}>
-      {#if disabled}
+      {#if effectiveDisabled}
         <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
       {:else}
         <span class="i-lucide-key-round" aria-hidden="true"></span>
@@ -235,6 +337,7 @@
 
   .recovery-methods button,
   .submit-button,
+  .create-new-button,
   .method-back {
     display: inline-flex;
     align-items: center;
@@ -265,6 +368,12 @@
     font-weight: 760;
   }
 
+  .recovery-result {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+  }
+
   .method-back {
     width: 38px;
     min-height: 38px;
@@ -275,6 +384,7 @@
 
   .recovery-methods button span:last-child,
   .submit-button span:last-child,
+  .create-new-button span:last-child,
   .selected-method span:last-child {
     min-width: 0;
     overflow: hidden;
@@ -284,6 +394,7 @@
 
   .recovery-methods button:hover:not(:disabled),
   .submit-button:hover:not(:disabled),
+  .create-new-button:hover:not(:disabled),
   .method-back:hover:not(:disabled) {
     background: var(--control-hover, #e8e8ed);
   }
@@ -335,7 +446,14 @@
     color: var(--accent-contrast, #fff);
   }
 
+  .create-new-button {
+    width: 100%;
+    background: var(--accent, #007aff);
+    color: var(--accent-contrast, #fff);
+  }
+
   .submit-button:disabled,
+  .create-new-button:disabled,
   .recovery-methods button:disabled,
   .method-back:disabled {
     cursor: default;
@@ -346,6 +464,13 @@
     margin: 0;
     color: var(--danger-text, #d93025);
     font-size: 0.82rem;
+    font-weight: 650;
+  }
+
+  .result-description {
+    margin: 0;
+    color: var(--text-muted, #6e6e73);
+    font-size: 0.9rem;
     font-weight: 650;
   }
 
