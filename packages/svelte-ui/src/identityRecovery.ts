@@ -16,10 +16,10 @@ export interface IdentityRecoveryRequest {
 }
 
 export const IDENTITY_RECOVERY_METHODS: readonly IdentityRecoveryMethodOption[] = [
-  { id: 'nsec', label: 'nsec', icon: 'i-lucide-key-round' },
+  { id: 'nip07', label: 'Browser extension', icon: 'i-lucide-plug' },
   { id: 'seed_phrase', label: 'Seed phrase', icon: 'i-lucide-list-ordered' },
-  { id: 'nip07', label: 'Extension', icon: 'i-lucide-plug' },
-  { id: 'nip46', label: 'Remote signer', icon: 'i-lucide-radio-tower' },
+  { id: 'nip46', label: 'Link device', icon: 'i-lucide-link' },
+  { id: 'nsec', label: 'Secret key', icon: 'i-lucide-key-round' },
 ];
 
 export function normalizeIdentityRecoveryRequest(
@@ -29,7 +29,7 @@ export function normalizeIdentityRecoveryRequest(
   if (method === 'nsec') {
     return {
       method,
-      nsec: requireTrimmed(request.nsec, 'nsec'),
+      nsec: requireTrimmed(request.nsec, 'secret key'),
     };
   }
   if (method === 'seed_phrase') {
@@ -44,7 +44,7 @@ export function normalizeIdentityRecoveryRequest(
   }
   return {
     method,
-    nip46Connection: requireTrimmed(request.nip46Connection, 'remote signer'),
+    nip46Connection: requireTrimmed(request.nip46Connection, 'link device'),
     ...(request.nip46Relay?.trim() ? { nip46Relay: request.nip46Relay.trim() } : {}),
   };
 }

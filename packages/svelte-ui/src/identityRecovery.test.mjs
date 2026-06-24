@@ -19,13 +19,19 @@ test('IdentityRecoveryPanel is exported as a shared Svelte UI component', () => 
 
 test('identity recovery methods cover supported recovery options', () => {
   assert.deepEqual(IDENTITY_RECOVERY_METHODS.map((method) => method.id), [
-    'nsec',
-    'seed_phrase',
     'nip07',
+    'seed_phrase',
     'nip46',
+    'nsec',
+  ]);
+  assert.deepEqual(IDENTITY_RECOVERY_METHODS.map((method) => method.label), [
+    'Browser extension',
+    'Seed phrase',
+    'Link device',
+    'Secret key',
   ]);
   assert.ok(IDENTITY_RECOVERY_METHODS.some((method) => method.icon === 'i-lucide-key-round'));
-  assert.ok(IDENTITY_RECOVERY_METHODS.some((method) => method.icon === 'i-lucide-radio-tower'));
+  assert.ok(IDENTITY_RECOVERY_METHODS.some((method) => method.icon === 'i-lucide-link'));
   assert.match(panelSource, /IDENTITY_RECOVERY_METHODS/);
 });
 
