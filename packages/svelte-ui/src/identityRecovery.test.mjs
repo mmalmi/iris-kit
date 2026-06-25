@@ -33,6 +33,7 @@ test('identity recovery methods cover supported recovery options', () => {
   assert.ok(IDENTITY_RECOVERY_METHODS.some((method) => method.icon === 'i-lucide-key-round'));
   assert.ok(IDENTITY_RECOVERY_METHODS.some((method) => method.icon === 'i-lucide-link'));
   assert.match(panelSource, /IDENTITY_RECOVERY_METHODS/);
+  assert.match(panelSource, /methods/);
   assert.match(panelSource, /showCreateNew/);
   assert.match(panelSource, /onCreateNew/);
   assert.match(panelSource, /selected === 'nip07'/);

@@ -27,12 +27,15 @@ test('user settings panel exposes expected user management actions', () => {
   assert.match(panelSource, /user-grant-admin/);
   assert.match(panelSource, /user-revoke-admin/);
   assert.match(panelSource, /user-remove-key/);
+  assert.match(panelSource, /user-key-status/);
+  assert.match(panelSource, /data-device-status/);
   assert.match(panelSource, /user-link-invite-qr/);
   assert.match(panelSource, /user-link-invite-loading/);
   assert.match(panelSource, /inviteQrUrl/);
   assert.match(panelSource, /showSummary/);
   assert.match(panelSource, /showDevicesHeading/);
   assert.match(panelSource, /showKeyBadges/);
+  assert.match(panelSource, /keyBadgeMode/);
   assert.match(panelSource, /Add Device/);
   assert.match(panelSource, /Copy link/);
   assert.match(panelSource, /Device requests/);
@@ -48,7 +51,9 @@ test('user settings panel exposes expected user management actions', () => {
 
 test('user settings helpers format key labels and capabilities', () => {
   assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: ' Laptop ' }), 'Laptop');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: 'This device' }), 'Device');
   assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), current: true }), 'This device');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: 'Laptop', current: true }), 'This device');
   assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64) }), 'Device');
   assert.deepEqual(userSettingsCapabilityLabels({
     can_admin_profile: true,

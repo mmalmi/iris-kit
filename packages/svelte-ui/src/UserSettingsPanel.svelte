@@ -7,6 +7,8 @@
     type UserSettingsPendingRequest,
   } from './userSettings';
 
+  type UserSettingsKeyBadgeMode = 'all' | 'admin' | 'none';
+
   interface Props {
     userName?: string;
     userDescription?: string;
@@ -18,6 +20,7 @@
     showSummary?: boolean;
     showDevicesHeading?: boolean;
     showKeyBadges?: boolean;
+    keyBadgeMode?: UserSettingsKeyBadgeMode;
     inviteBusy?: boolean;
     actionBusyKey?: string;
     onCreateInvite?: () => void | Promise<void>;
@@ -39,6 +42,7 @@
     showSummary = true,
     showDevicesHeading = true,
     showKeyBadges = true,
+    keyBadgeMode = undefined,
     inviteBusy = false,
     actionBusyKey = '',
     onCreateInvite = undefined,
@@ -56,6 +60,7 @@
   );
 
   let showAddDevice = $state(false);
+  let effectiveKeyBadgeMode = $derived(keyBadgeMode ?? (showKeyBadges ? 'all' : 'none'));
 
   $effect(() => {
     if (pendingRequests.length > 0) showAddDevice = true;
@@ -67,6 +72,14 @@
 
   function requestBusy(request: UserSettingsPendingRequest): boolean {
     return actionBusyKey === `approve:${request.id}`;
+  }
+
+  function keyBadgeLabels(key: UserSettingsKey): string[] {
+    if (effectiveKeyBadgeMode === 'none') return [];
+    if (effectiveKeyBadgeMode === 'admin') {
+      return key.capabilities?.can_admin_profile ? ['Admin'] : [];
+    }
+    return userSettingsCapabilityLabels(key.capabilities);
   }
 
   function toggleAddDevice(): void {
@@ -186,13 +199,21 @@
 
     <div class="key-list" data-testid="user-settings-keys">
       {#each sortedKeys as key (key.pubkey)}
-        {@const labels = showKeyBadges ? userSettingsCapabilityLabels(key.capabilities) : []}
         {@const isAdmin = Boolean(key.capabilities?.can_admin_profile)}
+        {@const labels = keyBadgeLabels(key)}
         <div class="key-row" data-testid="user-key-row">
           <div class="key-main">
             <div class="key-title">
+              <span
+                class:online={key.online}
+                class="device-status-dot"
+                aria-label={key.online ? 'Online' : 'Offline'}
+                title={key.online ? 'Online' : 'Offline'}
+                data-device-status={key.online ? 'online' : 'offline'}
+                data-testid="user-key-status"
+              ></span>
               <strong>{userSettingsKeyLabel(key)}</strong>
-              {#if showKeyBadges && key.current}
+              {#if effectiveKeyBadgeMode === 'all' && key.current}
                 <span class="badge current">Current</span>
               {/if}
             </div>
@@ -439,6 +460,18 @@
     gap: 6px;
     min-width: 0;
     flex-wrap: wrap;
+  }
+
+  .device-status-dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: var(--user-settings-offline, #6e6e73);
+  }
+
+  .device-status-dot.online {
+    background: var(--user-settings-success, #28a745);
   }
 
   .key-title strong,

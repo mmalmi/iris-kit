@@ -9,6 +9,7 @@
 
   interface Props {
     method?: IdentityRecoveryMethod;
+    methods?: IdentityRecoveryMethod[];
     methodLayout?: 'grid' | 'column';
     disabled?: boolean;
     submitLabel?: string;
@@ -30,6 +31,7 @@
 
   let {
     method = undefined,
+    methods = undefined,
     methodLayout = 'grid',
     disabled = false,
     submitLabel = 'Continue',
@@ -71,7 +73,10 @@
       && !effectiveCreateNewBusy,
   );
   const visibleMethods = $derived(
-    IDENTITY_RECOVERY_METHODS.filter((option) => option.id !== 'nip07' || nostrAvailable),
+    IDENTITY_RECOVERY_METHODS.filter((option) => (
+      (!methods || methods.includes(option.id))
+        && (option.id !== 'nip07' || nostrAvailable)
+    )),
   );
   const selectedOption = $derived(IDENTITY_RECOVERY_METHODS.find((option) => option.id === selected));
   const request = $derived<IdentityRecoveryRequest | null>(selected ? {

@@ -13,6 +13,7 @@ export interface UserSettingsKey {
   capabilities?: UserSettingsCapabilities;
   addedAt?: number;
   current?: boolean;
+  online?: boolean;
 }
 
 export interface UserSettingsPendingRequest {
@@ -23,7 +24,10 @@ export interface UserSettingsPendingRequest {
 }
 
 export function userSettingsKeyLabel(key: UserSettingsKey): string {
-  return key.label?.trim() || (key.current ? 'This device' : 'Device');
+  if (key.current) return 'This device';
+  const label = key.label?.trim();
+  if (label && label.toLowerCase() !== 'this device') return label;
+  return 'Device';
 }
 
 export function userSettingsCapabilityLabels(
