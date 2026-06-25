@@ -1,4 +1,4 @@
-export interface IdentitySettingsCapabilities {
+export interface UserSettingsCapabilities {
   can_write_roots?: boolean;
   can_admin_profile?: boolean;
   can_recover_app_keys?: boolean;
@@ -6,34 +6,28 @@ export interface IdentitySettingsCapabilities {
   can_decrypt_key_epochs?: boolean;
 }
 
-export interface IdentitySettingsKey {
+export interface UserSettingsKey {
   pubkey: string;
   label?: string;
   purposes?: string[];
-  capabilities?: IdentitySettingsCapabilities;
+  capabilities?: UserSettingsCapabilities;
   addedAt?: number;
   current?: boolean;
 }
 
-export interface IdentitySettingsPendingRequest {
+export interface UserSettingsPendingRequest {
   id: string;
   pubkey: string;
   label?: string;
   requestedAt?: number;
 }
 
-export function identitySettingsKeyLabel(key: IdentitySettingsKey): string {
-  return key.label?.trim() || shortIdentityKey(key.pubkey);
+export function userSettingsKeyLabel(key: UserSettingsKey): string {
+  return key.label?.trim() || (key.current ? 'This device' : 'Linked key');
 }
 
-export function shortIdentityKey(value: string): string {
-  const trimmed = value.trim();
-  if (trimmed.length <= 16) return trimmed;
-  return `${trimmed.slice(0, 8)}...${trimmed.slice(-6)}`;
-}
-
-export function identitySettingsCapabilityLabels(
-  capabilities: IdentitySettingsCapabilities | undefined,
+export function userSettingsCapabilityLabels(
+  capabilities: UserSettingsCapabilities | undefined,
 ): string[] {
   const labels: string[] = [];
   if (capabilities?.can_admin_profile) labels.push('Admin');

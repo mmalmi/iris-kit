@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+import packageJson from '../package.json' with { type: 'json' };
+import {
+  userSettingsCapabilityLabels,
+  userSettingsKeyLabel,
+} from './userSettings.ts';
+
+const panelSource = readFileSync(new URL('./UserSettingsPanel.svelte', import.meta.url), 'utf8');
+
+test('UserSettingsPanel is exported as a shared Svelte UI component', () => {
+  assert.deepEqual(packageJson.exports['./UserSettingsPanel.svelte'], {
+    svelte: './src/UserSettingsPanel.svelte',
+    default: './src/UserSettingsPanel.svelte',
+  });
+  assert.deepEqual(packageJson.exports['./userSettings'], {
+    types: './src/userSettings.ts',
+    default: './src/userSettings.ts',
+  });
+});
+
+test('user settings panel exposes expected user management actions', () => {
+  assert.match(panelSource, /user-settings-panel/);
+  assert.match(panelSource, /user-create-link/);
+  assert.match(panelSource, /user-approve-link/);
+  assert.match(panelSource, /user-grant-admin/);
+  assert.match(panelSource, /user-revoke-admin/);
+  assert.match(panelSource, /user-remove-key/);
+  assert.doesNotMatch(panelSource, /Current identity/);
+  assert.doesNotMatch(panelSource, /shortUserKey/);
+});
+
+test('user settings helpers format key labels and capabilities', () => {
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: ' Laptop ' }), 'Laptop');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), current: true }), 'This device');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64) }), 'Linked key');
+  assert.deepEqual(userSettingsCapabilityLabels({
+    can_admin_profile: true,
+    can_write_roots: true,
+    can_decrypt_key_epochs: true,
+  }), ['Admin', 'Write', 'Decrypt']);
+});

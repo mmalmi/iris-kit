@@ -1,35 +1,32 @@
 <script lang="ts">
   import CopyButton from './CopyButton.svelte';
   import {
-    identitySettingsCapabilityLabels,
-    identitySettingsKeyLabel,
-    shortIdentityKey,
-    type IdentitySettingsKey,
-    type IdentitySettingsPendingRequest,
-  } from './identitySettings';
+    userSettingsCapabilityLabels,
+    userSettingsKeyLabel,
+    type UserSettingsKey,
+    type UserSettingsPendingRequest,
+  } from './userSettings';
 
   interface Props {
-    identityName?: string;
-    identityId?: string;
-    currentKeyPubkey?: string;
-    keys?: IdentitySettingsKey[];
-    pendingRequests?: IdentitySettingsPendingRequest[];
+    userName?: string;
+    userDescription?: string;
+    keys?: UserSettingsKey[];
+    pendingRequests?: UserSettingsPendingRequest[];
     inviteUrl?: string;
     canManage?: boolean;
     inviteBusy?: boolean;
     actionBusyKey?: string;
     onCreateInvite?: () => void | Promise<void>;
-    onApproveRequest?: (request: IdentitySettingsPendingRequest) => void | Promise<void>;
-    onGrantAdmin?: (key: IdentitySettingsKey) => void | Promise<void>;
-    onRevokeAdmin?: (key: IdentitySettingsKey) => void | Promise<void>;
-    onRemoveKey?: (key: IdentitySettingsKey) => void | Promise<void>;
+    onApproveRequest?: (request: UserSettingsPendingRequest) => void | Promise<void>;
+    onGrantAdmin?: (key: UserSettingsKey) => void | Promise<void>;
+    onRevokeAdmin?: (key: UserSettingsKey) => void | Promise<void>;
+    onRemoveKey?: (key: UserSettingsKey) => void | Promise<void>;
     class?: string;
   }
 
   let {
-    identityName = 'Current identity',
-    identityId = '',
-    currentKeyPubkey = '',
+    userName = 'Current user',
+    userDescription = '',
     keys = [],
     pendingRequests = [],
     inviteUrl = '',
@@ -46,39 +43,36 @@
 
   let sortedKeys = $derived(
     [...keys].sort((left, right) => Number(Boolean(right.current)) - Number(Boolean(left.current))
-      || identitySettingsKeyLabel(left).localeCompare(identitySettingsKeyLabel(right))
+      || userSettingsKeyLabel(left).localeCompare(userSettingsKeyLabel(right))
       || left.pubkey.localeCompare(right.pubkey)),
   );
 
-  function keyBusy(key: IdentitySettingsKey, action: string): boolean {
+  function keyBusy(key: UserSettingsKey, action: string): boolean {
     return actionBusyKey === `${action}:${key.pubkey}`;
   }
 
-  function requestBusy(request: IdentitySettingsPendingRequest): boolean {
+  function requestBusy(request: UserSettingsPendingRequest): boolean {
     return actionBusyKey === `approve:${request.id}`;
   }
 </script>
 
-<div class={`identity-settings ${className}`.trim()} data-testid="identity-settings-panel">
-  <section class="identity-summary" data-testid="identity-settings-summary">
+<div class={`user-settings ${className}`.trim()} data-testid="user-settings-panel">
+  <section class="user-summary" data-testid="user-settings-summary">
     <div class="summary-icon" aria-hidden="true">
-      <span class="i-lucide-fingerprint"></span>
+      <span class="i-lucide-user-round"></span>
     </div>
     <div class="summary-copy">
-      <h3>{identityName}</h3>
-      {#if identityId}
-        <p>{identityId}</p>
-      {/if}
-      {#if currentKeyPubkey}
-        <p>Current key {shortIdentityKey(currentKeyPubkey)}</p>
+      <h3>{userName}</h3>
+      {#if userDescription}
+        <p>{userDescription}</p>
       {/if}
     </div>
   </section>
 
-  <section class="panel-section" data-testid="identity-settings-link">
+  <section class="panel-section" data-testid="user-settings-link">
     <div class="section-heading">
       <div>
-        <h4>Link keys</h4>
+        <h4>Linked keys</h4>
       </div>
       {#if canManage && onCreateInvite}
         <button
@@ -86,7 +80,7 @@
           class="secondary-button"
           onclick={() => onCreateInvite?.()}
           disabled={inviteBusy}
-          data-testid="identity-create-link"
+          data-testid="user-create-link"
         >
           {#if inviteBusy}
             <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
@@ -99,7 +93,7 @@
     </div>
 
     {#if inviteUrl}
-      <div class="copy-row" data-testid="identity-link-invite">
+      <div class="copy-row" data-testid="user-link-invite">
         <span class="copy-value">{inviteUrl}</span>
         <CopyButton
           text={inviteUrl}
@@ -108,7 +102,7 @@
           class="copy-button"
           iconClass="i-lucide-copy"
           copiedIconClass="i-lucide-check"
-          testId="identity-copy-link"
+          testId="user-copy-link"
         />
       </div>
     {/if}
@@ -116,10 +110,10 @@
     {#if pendingRequests.length > 0}
       <div class="request-list">
         {#each pendingRequests as request (request.id)}
-          <div class="request-row" data-testid="identity-link-request">
+          <div class="request-row" data-testid="user-link-request">
             <div>
-              <strong>{request.label?.trim() || 'New key'}</strong>
-              <span>{shortIdentityKey(request.pubkey)}</span>
+              <strong>{request.label?.trim() || 'New device'}</strong>
+              <span>Waiting to be linked</span>
             </div>
             {#if canManage && onApproveRequest}
               <button
@@ -127,7 +121,7 @@
                 class="primary-button"
                 onclick={() => onApproveRequest?.(request)}
                 disabled={requestBusy(request)}
-                data-testid="identity-approve-link"
+                data-testid="user-approve-link"
               >
                 {#if requestBusy(request)}
                   <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
@@ -143,26 +137,25 @@
     {/if}
   </section>
 
-  <section class="panel-section" data-testid="identity-settings-keys">
+  <section class="panel-section" data-testid="user-settings-keys">
     <div class="section-heading">
       <div>
-        <h4>Keys</h4>
+        <h4>User keys</h4>
       </div>
     </div>
 
     <div class="key-list">
       {#each sortedKeys as key (key.pubkey)}
-        {@const labels = identitySettingsCapabilityLabels(key.capabilities)}
+        {@const labels = userSettingsCapabilityLabels(key.capabilities)}
         {@const isAdmin = Boolean(key.capabilities?.can_admin_profile)}
-        <div class="key-row" data-testid="identity-key-row">
+        <div class="key-row" data-testid="user-key-row">
           <div class="key-main">
             <div class="key-title">
-              <strong>{identitySettingsKeyLabel(key)}</strong>
+              <strong>{userSettingsKeyLabel(key)}</strong>
               {#if key.current}
                 <span class="badge current">Current</span>
               {/if}
             </div>
-            <div class="key-pubkey">{shortIdentityKey(key.pubkey)}</div>
             {#if labels.length > 0}
               <div class="badge-row">
                 {#each labels as label (label)}
@@ -180,7 +173,7 @@
                   class="secondary-button"
                   onclick={() => onRevokeAdmin?.(key)}
                   disabled={keyBusy(key, 'revoke-admin')}
-                  data-testid="identity-revoke-admin"
+                  data-testid="user-revoke-admin"
                 >
                   <span>Remove admin</span>
                 </button>
@@ -190,7 +183,7 @@
                   class="secondary-button"
                   onclick={() => onGrantAdmin?.(key)}
                   disabled={keyBusy(key, 'grant-admin')}
-                  data-testid="identity-grant-admin"
+                  data-testid="user-grant-admin"
                 >
                   <span>Make admin</span>
                 </button>
@@ -202,7 +195,7 @@
                   class="danger-button"
                   onclick={() => onRemoveKey?.(key)}
                   disabled={keyBusy(key, 'remove')}
-                  data-testid="identity-remove-key"
+                  data-testid="user-remove-key"
                 >
                   <span class="i-lucide-trash-2" aria-hidden="true"></span>
                 </button>
@@ -211,27 +204,27 @@
           {/if}
         </div>
       {:else}
-        <p class="empty">No identity keys found.</p>
+        <p class="empty">No user keys found.</p>
       {/each}
     </div>
   </section>
 </div>
 
 <style>
-  .identity-settings {
+  .user-settings {
     display: grid;
     gap: 16px;
     min-width: 0;
   }
 
-  .identity-summary,
+  .user-summary,
   .panel-section {
     border-radius: 8px;
-    background: var(--identity-settings-surface, #f5f5f7);
-    color: var(--identity-settings-text, #1d1d1f);
+    background: var(--user-settings-surface, #f5f5f7);
+    color: var(--user-settings-text, #1d1d1f);
   }
 
-  .identity-summary {
+  .user-summary {
     display: flex;
     gap: 12px;
     min-width: 0;
@@ -246,8 +239,8 @@
     align-items: center;
     justify-content: center;
     border-radius: 8px;
-    background: var(--identity-settings-icon-bg, #e8e8ed);
-    color: var(--identity-settings-accent, #007aff);
+    background: var(--user-settings-icon-bg, #e8e8ed);
+    color: var(--user-settings-accent, #007aff);
   }
 
   .summary-copy {
@@ -271,11 +264,10 @@
   }
 
   p,
-  .key-pubkey,
   .request-row span,
   .copy-value,
   .empty {
-    color: var(--identity-settings-muted, #6e6e73);
+    color: var(--user-settings-muted, #6e6e73);
     font-size: 0.82rem;
   }
 
@@ -302,9 +294,9 @@
   .copy-row,
   .request-row,
   .key-row {
-    border: 1px solid var(--identity-settings-border, #d2d2d7);
+    border: 1px solid var(--user-settings-border, #d2d2d7);
     border-radius: 8px;
-    background: var(--identity-settings-row, #fff);
+    background: var(--user-settings-row, #fff);
     padding: 10px;
   }
 
@@ -316,7 +308,6 @@
   }
 
   .copy-value,
-  .key-pubkey,
   .request-row span {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -353,21 +344,21 @@
     min-height: 22px;
     align-items: center;
     border-radius: 999px;
-    background: var(--identity-settings-badge-bg, #e8e8ed);
-    color: var(--identity-settings-badge-text, #3a3a3c);
+    background: var(--user-settings-badge-bg, #e8e8ed);
+    color: var(--user-settings-badge-text, #3a3a3c);
     font-size: 0.72rem;
     font-weight: 720;
     padding: 0 8px;
   }
 
   .badge.admin {
-    background: color-mix(in srgb, var(--identity-settings-accent, #007aff) 16%, transparent);
-    color: var(--identity-settings-accent, #007aff);
+    background: color-mix(in srgb, var(--user-settings-accent, #007aff) 16%, transparent);
+    color: var(--user-settings-accent, #007aff);
   }
 
   .badge.current {
-    background: color-mix(in srgb, var(--identity-settings-success, #28a745) 16%, transparent);
-    color: var(--identity-settings-success, #28a745);
+    background: color-mix(in srgb, var(--user-settings-success, #28a745) 16%, transparent);
+    color: var(--user-settings-success, #28a745);
   }
 
   button,
@@ -377,10 +368,10 @@
     justify-content: center;
     gap: 6px;
     min-height: 34px;
-    border: 1px solid var(--identity-settings-border, #d2d2d7);
+    border: 1px solid var(--user-settings-border, #d2d2d7);
     border-radius: 8px;
-    background: var(--identity-settings-button, #fff);
-    color: var(--identity-settings-text, #1d1d1f);
+    background: var(--user-settings-button, #fff);
+    color: var(--user-settings-text, #1d1d1f);
     font: inherit;
     font-size: 0.82rem;
     font-weight: 740;
@@ -390,12 +381,12 @@
 
   .primary-button {
     border-color: transparent;
-    background: var(--identity-settings-accent, #007aff);
-    color: var(--identity-settings-accent-contrast, #fff);
+    background: var(--user-settings-accent, #007aff);
+    color: var(--user-settings-accent-contrast, #fff);
   }
 
   .danger-button {
-    color: var(--identity-settings-danger, #d93025);
+    color: var(--user-settings-danger, #d93025);
   }
 
   button:disabled,
@@ -405,10 +396,10 @@
   }
 
   .spin {
-    animation: identity-settings-spin 0.9s linear infinite;
+    animation: user-settings-spin 0.9s linear infinite;
   }
 
-  @keyframes identity-settings-spin {
+  @keyframes user-settings-spin {
     to {
       transform: rotate(360deg);
     }

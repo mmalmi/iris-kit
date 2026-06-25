@@ -4,7 +4,7 @@ export { default as CopyButton } from './CopyButton.svelte';
 export { default as CopyInput } from './CopyInput.svelte';
 export { default as CopyText } from './CopyText.svelte';
 export { default as IdentityRecoveryPanel } from './IdentityRecoveryPanel.svelte';
-export { default as IdentitySettingsPanel } from './IdentitySettingsPanel.svelte';
+export { default as UserSettingsPanel } from './UserSettingsPanel.svelte';
 export { default as Minidenticon } from './Minidenticon.svelte';
 export { default as Name } from './Name.svelte';
 export { default as ProxyImg } from './ProxyImg.svelte';
@@ -54,13 +54,12 @@ export {
   type IdentityRecoveryRequest,
 } from './identityRecovery';
 export {
-  identitySettingsCapabilityLabels,
-  identitySettingsKeyLabel,
-  shortIdentityKey,
-  type IdentitySettingsCapabilities,
-  type IdentitySettingsKey,
-  type IdentitySettingsPendingRequest,
-} from './identitySettings';
+  userSettingsCapabilityLabels,
+  userSettingsKeyLabel,
+  type UserSettingsCapabilities,
+  type UserSettingsKey,
+  type UserSettingsPendingRequest,
+} from './userSettings';
 export {
   coolName,
   coolNameAdjectives,
