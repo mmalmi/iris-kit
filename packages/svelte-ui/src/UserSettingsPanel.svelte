@@ -17,6 +17,7 @@
     canManage?: boolean;
     showSummary?: boolean;
     showDevicesHeading?: boolean;
+    showKeyBadges?: boolean;
     inviteBusy?: boolean;
     actionBusyKey?: string;
     onCreateInvite?: () => void | Promise<void>;
@@ -37,6 +38,7 @@
     canManage = false,
     showSummary = true,
     showDevicesHeading = true,
+    showKeyBadges = true,
     inviteBusy = false,
     actionBusyKey = '',
     onCreateInvite = undefined,
@@ -184,13 +186,13 @@
 
     <div class="key-list" data-testid="user-settings-keys">
       {#each sortedKeys as key (key.pubkey)}
-        {@const labels = userSettingsCapabilityLabels(key.capabilities)}
+        {@const labels = showKeyBadges ? userSettingsCapabilityLabels(key.capabilities) : []}
         {@const isAdmin = Boolean(key.capabilities?.can_admin_profile)}
         <div class="key-row" data-testid="user-key-row">
           <div class="key-main">
             <div class="key-title">
               <strong>{userSettingsKeyLabel(key)}</strong>
-              {#if key.current}
+              {#if showKeyBadges && key.current}
                 <span class="badge current">Current</span>
               {/if}
             </div>
