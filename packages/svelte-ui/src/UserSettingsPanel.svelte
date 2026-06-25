@@ -16,6 +16,7 @@
     inviteQrUrl?: string;
     canManage?: boolean;
     showSummary?: boolean;
+    showDevicesHeading?: boolean;
     inviteBusy?: boolean;
     actionBusyKey?: string;
     onCreateInvite?: () => void | Promise<void>;
@@ -35,6 +36,7 @@
     inviteQrUrl = '',
     canManage = false,
     showSummary = true,
+    showDevicesHeading = true,
     inviteBusy = false,
     actionBusyKey = '',
     onCreateInvite = undefined,
@@ -90,11 +92,13 @@
   {/if}
 
   <section class="panel-section" data-testid="user-settings-devices">
-    <div class="section-heading">
-      <div>
-        <h4>Devices</h4>
+    {#if showDevicesHeading}
+      <div class="section-heading">
+        <div>
+          <h4>Devices</h4>
+        </div>
       </div>
-    </div>
+    {/if}
 
     {#if canManage}
       <div class="add-device-section" data-testid="user-add-device-section">
