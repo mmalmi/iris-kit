@@ -1,4 +1,9 @@
-import { nip19 } from 'nostr-tools';
+import { finalizeEvent, getPublicKey, nip19, type Event } from 'nostr-tools';
+import {
+  FACT_OP_KIND,
+  buildIdentityLinkRequestDraft,
+  parseIdentityLinkRequestEvent,
+} from 'nostr-social-graph';
 import {
   APP_KEY_WRITER_CAPABILITIES,
   createAddAppKeyRosterOp,
@@ -8,11 +13,14 @@ import {
   type IrisProfileRosterOpContent,
   type SignedIrisProfileRosterOp,
 } from './profile.ts';
+import type { IrisNostrEventDraft } from './profile.ts';
+import { requireValidSignature } from './profileJson.ts';
 import { irisProfileRosterParentIds } from './profileProjection.ts';
 
 export const DEVICE_LINK_INVITE_PREFIX = 'https://drive.iris.to/invite/';
 export const DEVICE_LINK_INVITE_WEB_PREFIX = DEVICE_LINK_INVITE_PREFIX;
 export const DEVICE_LINK_INVITE_VERSION = 1;
+export const KIND_DEVICE_LINK_REQUEST = FACT_OP_KIND;
 
 export interface DeviceLinkInvite {
   profileId: IrisProfileId;
@@ -24,9 +32,24 @@ export interface DeviceLinkRequest {
   profileId: IrisProfileId;
   adminAppKeyPubkey: string;
   deviceAppKeyPubkey: string;
-  linkSecret: string;
+  linkSecret?: string;
+  linkSecretHash?: string;
   label?: string;
   requestedAt: number;
+}
+
+export interface SignedDeviceLinkRequest {
+  requestId: string;
+  signerPubkey: string;
+  request: DeviceLinkRequest;
+  linkSecretHash: string;
+  event_json: string;
+}
+
+export interface DeviceLinkRequestScope {
+  profileId: IrisProfileId;
+  adminAppKeyPubkey: string;
+  linkSecretHash?: string;
 }
 
 interface DeviceLinkInvitePayload {
@@ -83,6 +106,79 @@ export function createDeviceLinkRequest(options: {
     linkSecret: options.invite.linkSecret,
     requestedAt: options.requestedAt,
     ...(options.label?.trim() ? { label: options.label.trim() } : {}),
+  };
+}
+
+export function buildDeviceLinkRequestEventDraft(options: {
+  signerPubkey: string;
+  request: DeviceLinkRequest;
+  linkSecretHash: string;
+  clientNonce?: string;
+}): IrisNostrEventDraft {
+  const signerPubkey = requirePubkey(options.signerPubkey, 'device AppKey signer');
+  const deviceAppKeyPubkey = requirePubkey(options.request.deviceAppKeyPubkey, 'device AppKey');
+  if (signerPubkey !== deviceAppKeyPubkey) {
+    throw new Error('device link request must be signed by the requesting AppKey');
+  }
+  const draft = buildIdentityLinkRequestDraft({
+    signerPubkey,
+    identity: options.request.profileId,
+    adminPubkey: options.request.adminAppKeyPubkey,
+    linkSecretHash: requireNonEmpty(options.linkSecretHash, 'link secret hash'),
+    requestedAt: options.request.requestedAt,
+    ...(options.clientNonce !== undefined ? { clientNonce: options.clientNonce } : {}),
+    ...(options.request.label !== undefined ? { label: options.request.label } : {}),
+  });
+  return {
+    kind: draft.kind,
+    content: draft.content,
+    created_at: draft.created_at,
+    tags: draft.tags,
+  };
+}
+
+export function signDeviceLinkRequestEvent(options: {
+  signerSecretKey: Uint8Array;
+  request: DeviceLinkRequest;
+  linkSecretHash: string;
+  clientNonce?: string;
+}): Event {
+  return finalizeEvent(buildDeviceLinkRequestEventDraft({
+    signerPubkey: getPublicKey(options.signerSecretKey),
+    request: options.request,
+    linkSecretHash: options.linkSecretHash,
+    ...(options.clientNonce !== undefined ? { clientNonce: options.clientNonce } : {}),
+  }), options.signerSecretKey);
+}
+
+export function parseDeviceLinkRequestEvent(
+  event: Event,
+  scope?: DeviceLinkRequestScope,
+): SignedDeviceLinkRequest {
+  requireValidSignature(event);
+  const signed = parseIdentityLinkRequestEvent(event);
+  const content = signed.content;
+  if (scope && (
+    content.identity !== scope.profileId
+    || content.adminPubkey !== scope.adminAppKeyPubkey
+    || (scope.linkSecretHash !== undefined && content.linkSecretHash !== scope.linkSecretHash)
+  )) {
+    throw new Error('device link request does not match scope');
+  }
+  const request: DeviceLinkRequest = {
+    profileId: content.identity,
+    adminAppKeyPubkey: content.adminPubkey,
+    deviceAppKeyPubkey: content.keyPubkey,
+    linkSecretHash: content.linkSecretHash,
+    requestedAt: content.requestedAt,
+    ...(content.label !== undefined ? { label: content.label } : {}),
+  };
+  return {
+    requestId: signed.requestId,
+    signerPubkey: signed.signerPubkey,
+    request,
+    linkSecretHash: content.linkSecretHash,
+    event_json: JSON.stringify(event),
   };
 }
 

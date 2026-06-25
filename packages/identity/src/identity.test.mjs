@@ -17,6 +17,7 @@ import {
   isCompleteDeviceLinkInviteInput,
   KIND_IRIS_PROFILE_FACET_ACCEPTANCE,
   KIND_IRIS_PROFILE_ROSTER_OP,
+  parseDeviceLinkRequestEvent,
   parseDeviceLinkInvite,
   projectIrisProfileRoster,
   representativeProfileAuthors,
@@ -28,6 +29,7 @@ import {
   signerCanRemoveAppKey,
   restoreIrisIdentitySession,
   serializeIrisIdentitySession,
+  signDeviceLinkRequestEvent,
 } from './index.ts';
 
 const profileId = '019ed693-4110-7352-8cc3-be90158ba91e';
@@ -134,6 +136,53 @@ test('admin approval projects the requested device as an AppKey facet', () => {
   assert.equal(projection.active_facets[admin].capabilities?.can_admin_profile, true);
   assert.equal(projection.active_facets[device].label, 'Phone');
   assert.equal(projection.active_facets[device].capabilities?.can_write_roots, true);
+});
+
+test('device link requests are signed identity fact events without raw invite secrets', async () => {
+  const admin = getPublicKey(generateSecretKey());
+  const deviceSecret = generateSecretKey();
+  const device = getPublicKey(deviceSecret);
+  const invite = parseDeviceLinkInvite(encodeDeviceLinkInvite({
+    profileId,
+    adminAppKeyPubkey: admin,
+    linkSecret: 'join-secret',
+  }));
+  assert.ok(invite);
+  const request = createDeviceLinkRequest({
+    invite,
+    deviceAppKeyPubkey: device,
+    requestedAt: 15,
+    label: 'Phone',
+  });
+  const event = signDeviceLinkRequestEvent({
+    signerSecretKey: deviceSecret,
+    request,
+    linkSecretHash: 'hash-from-invite',
+    clientNonce: 'link-request',
+  });
+
+  assert.equal(event.kind, KIND_IRIS_PROFILE_ROSTER_OP);
+  assert.equal(event.content, '');
+  assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'nostr_identity_link_request'));
+  assert.ok(event.tags.some((tag) => tag[0] === 'admin_pubkey' && tag[1] === admin));
+  assert.ok(event.tags.some((tag) => tag[0] === 'key_pubkey' && tag[1] === device));
+  assert.ok(event.tags.some((tag) => tag[0] === 'link_secret_hash' && tag[1] === 'hash-from-invite'));
+  assert.equal(JSON.stringify(event).includes('join-secret'), false);
+
+  const signed = parseDeviceLinkRequestEvent(event, {
+    profileId,
+    adminAppKeyPubkey: admin,
+    linkSecretHash: 'hash-from-invite',
+  });
+  assert.equal(signed.signerPubkey, device);
+  assert.deepEqual(signed.request, {
+    profileId,
+    adminAppKeyPubkey: admin,
+    deviceAppKeyPubkey: device,
+    linkSecretHash: 'hash-from-invite',
+    requestedAt: 15,
+    label: 'Phone',
+  });
 });
 
 test('roster ops are signed fact events', () => {
