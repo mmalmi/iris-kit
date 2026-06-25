@@ -24,6 +24,7 @@
     inviteBusy?: boolean;
     actionBusyKey?: string;
     onCreateInvite?: () => void | Promise<void>;
+    onResetInvite?: () => void | Promise<void>;
     onApproveRequest?: (request: UserSettingsPendingRequest) => void | Promise<void>;
     onGrantAdmin?: (key: UserSettingsKey) => void | Promise<void>;
     onRevokeAdmin?: (key: UserSettingsKey) => void | Promise<void>;
@@ -46,6 +47,7 @@
     inviteBusy = false,
     actionBusyKey = '',
     onCreateInvite = undefined,
+    onResetInvite = undefined,
     onApproveRequest = undefined,
     onGrantAdmin = undefined,
     onRevokeAdmin = undefined,
@@ -154,6 +156,22 @@
                     copiedIconClass="i-lucide-check"
                     testId="user-copy-link"
                   />
+                  {#if onResetInvite}
+                    <button
+                      type="button"
+                      class="reset-link-button"
+                      onclick={() => onResetInvite?.()}
+                      disabled={inviteBusy}
+                      data-testid="user-reset-link"
+                    >
+                      {#if inviteBusy}
+                        <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
+                      {:else}
+                        <span class="i-lucide-refresh-cw" aria-hidden="true"></span>
+                      {/if}
+                      <span>Reset link</span>
+                    </button>
+                  {/if}
                 </div>
               </div>
             {:else if inviteBusy}
@@ -416,9 +434,11 @@
 
   .invite-actions {
     display: flex;
+    gap: 8px;
     justify-content: center;
     min-width: 0;
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .invite-qr {
@@ -558,7 +578,8 @@
 
     .key-actions,
     .request-row button,
-    .copy-button {
+    .copy-button,
+    .reset-link-button {
       width: 100%;
     }
   }
