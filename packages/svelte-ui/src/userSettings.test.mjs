@@ -51,10 +51,11 @@ test('user settings panel exposes expected user management actions', () => {
 
 test('user settings helpers format key labels and capabilities', () => {
   assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: ' Laptop ' }), 'Laptop');
-  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: 'This device' }), 'Device');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: 'This device' }), 'Linked browser');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), online: true }), 'Connected browser');
   assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), current: true }), 'This device');
   assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: 'Laptop', current: true }), 'This device');
-  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64) }), 'Device');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64) }), 'Linked browser');
   assert.deepEqual(userSettingsCapabilityLabels({
     can_admin_profile: true,
     can_write_roots: true,

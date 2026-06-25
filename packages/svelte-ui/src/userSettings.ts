@@ -27,7 +27,7 @@ export function userSettingsKeyLabel(key: UserSettingsKey): string {
   if (key.current) return 'This device';
   const label = key.label?.trim();
   if (label && label.toLowerCase() !== 'this device') return label;
-  return 'Device';
+  return key.online ? 'Connected browser' : 'Linked browser';
 }
 
 export function userSettingsCapabilityLabels(
