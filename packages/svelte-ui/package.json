@@ -34,6 +34,10 @@
       "svelte": "./src/IdentityRecoveryPanel.svelte",
       "default": "./src/IdentityRecoveryPanel.svelte"
     },
+    "./IdentitySettingsPanel.svelte": {
+      "svelte": "./src/IdentitySettingsPanel.svelte",
+      "default": "./src/IdentitySettingsPanel.svelte"
+    },
     "./Minidenticon.svelte": {
       "svelte": "./src/Minidenticon.svelte",
       "default": "./src/Minidenticon.svelte"
@@ -65,6 +69,10 @@
     "./identityRecovery": {
       "types": "./src/identityRecovery.ts",
       "default": "./src/identityRecovery.ts"
+    },
+    "./identitySettings": {
+      "types": "./src/identitySettings.ts",
+      "default": "./src/identitySettings.ts"
     },
     "./markdownCopy": {
       "types": "./src/markdownCopy.ts",

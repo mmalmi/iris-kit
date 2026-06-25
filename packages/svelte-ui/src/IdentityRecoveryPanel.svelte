@@ -276,7 +276,7 @@
         <input
           type="text"
           value={nip46Connection}
-          placeholder="bunker://... or name@example.com"
+          placeholder="Invite link, bunker://..., or name@example.com"
           autocomplete="off"
           autocapitalize="none"
           spellcheck="false"
