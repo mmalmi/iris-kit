@@ -27,6 +27,7 @@ test('user settings panel exposes expected user management actions', () => {
   assert.match(panelSource, /user-grant-admin/);
   assert.match(panelSource, /user-revoke-admin/);
   assert.match(panelSource, /user-remove-key/);
+  assert.match(panelSource, /Link another device/);
   assert.doesNotMatch(panelSource, /Current identity/);
   assert.doesNotMatch(panelSource, /shortUserKey/);
 });

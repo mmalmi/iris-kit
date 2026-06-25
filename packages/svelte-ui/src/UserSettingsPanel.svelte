@@ -87,7 +87,7 @@
           {:else}
             <span class="i-lucide-link" aria-hidden="true"></span>
           {/if}
-          <span>Create link</span>
+          <span>Link another device</span>
         </button>
       {/if}
     </div>
