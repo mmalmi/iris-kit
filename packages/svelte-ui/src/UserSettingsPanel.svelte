@@ -15,6 +15,7 @@
     inviteUrl?: string;
     inviteQrUrl?: string;
     canManage?: boolean;
+    showSummary?: boolean;
     inviteBusy?: boolean;
     actionBusyKey?: string;
     onCreateInvite?: () => void | Promise<void>;
@@ -33,6 +34,7 @@
     inviteUrl = '',
     inviteQrUrl = '',
     canManage = false,
+    showSummary = true,
     inviteBusy = false,
     actionBusyKey = '',
     onCreateInvite = undefined,
@@ -73,17 +75,19 @@
 </script>
 
 <div class={`user-settings ${className}`.trim()} data-testid="user-settings-panel">
-  <section class="user-summary" data-testid="user-settings-summary">
-    <div class="summary-icon" aria-hidden="true">
-      <span class="i-lucide-user-round"></span>
-    </div>
-    <div class="summary-copy">
-      <h3>{userName}</h3>
-      {#if userDescription}
-        <p>{userDescription}</p>
-      {/if}
-    </div>
-  </section>
+  {#if showSummary}
+    <section class="user-summary" data-testid="user-settings-summary">
+      <div class="summary-icon" aria-hidden="true">
+        <span class="i-lucide-user-round"></span>
+      </div>
+      <div class="summary-copy">
+        <h3>{userName}</h3>
+        {#if userDescription}
+          <p>{userDescription}</p>
+        {/if}
+      </div>
+    </section>
+  {/if}
 
   <section class="panel-section" data-testid="user-settings-devices">
     <div class="section-heading">
@@ -121,13 +125,12 @@
                     data-testid="user-link-invite-qr"
                   />
                 {/if}
-                <div class="copy-row" data-testid="user-link-invite">
-                  <span class="copy-value">{inviteUrl}</span>
+                <div class="invite-actions" data-testid="user-link-invite">
                   <CopyButton
                     text={inviteUrl}
-                    label="Copy"
+                    label="Copy link"
                     copiedLabel="Copied"
-                    class="copy-button"
+                    class="copy-button copy-link-button"
                     iconClass="i-lucide-copy"
                     copiedIconClass="i-lucide-check"
                     testId="user-copy-link"
@@ -302,7 +305,6 @@
 
   p,
   .request-row span,
-  .copy-value,
   .request-count,
   .empty {
     color: var(--user-settings-muted, #6e6e73);
@@ -318,7 +320,6 @@
   .section-heading,
   .key-row,
   .request-row,
-  .copy-row,
   .add-device-toggle {
     display: flex;
     align-items: center;
@@ -330,7 +331,6 @@
     justify-content: space-between;
   }
 
-  .copy-row,
   .request-row,
   .key-row,
   .invite-loading,
@@ -385,6 +385,13 @@
     justify-items: center;
   }
 
+  .invite-actions {
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    width: 100%;
+  }
+
   .invite-qr {
     width: min(220px, 100%);
     aspect-ratio: 1;
@@ -393,18 +400,16 @@
     padding: 8px;
   }
 
-  .invite-card .copy-row {
-    width: 100%;
+  .copy-link-button {
+    min-width: min(180px, 100%);
   }
 
-  .copy-value,
   .key-main,
   .request-row div {
     min-width: 0;
     flex: 1;
   }
 
-  .copy-value,
   .request-row span {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -505,7 +510,7 @@
   @media (max-width: 560px) {
     .key-row,
     .request-row,
-    .copy-row {
+    .invite-actions {
       align-items: stretch;
       flex-direction: column;
     }

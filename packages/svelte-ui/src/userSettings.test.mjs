@@ -30,9 +30,12 @@ test('user settings panel exposes expected user management actions', () => {
   assert.match(panelSource, /user-link-invite-qr/);
   assert.match(panelSource, /user-link-invite-loading/);
   assert.match(panelSource, /inviteQrUrl/);
+  assert.match(panelSource, /showSummary/);
   assert.match(panelSource, /Add Device/);
+  assert.match(panelSource, /Copy link/);
   assert.match(panelSource, /Device requests/);
   assert.doesNotMatch(panelSource, /user-create-link/);
+  assert.doesNotMatch(panelSource, /copy-value/);
   assert.doesNotMatch(panelSource, /Create invite/);
   assert.doesNotMatch(panelSource, /New invite/);
   assert.doesNotMatch(panelSource, /User keys/);
