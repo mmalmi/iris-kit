@@ -233,6 +233,8 @@
                 <button
                   type="button"
                   class="danger-button"
+                  aria-label="Remove device"
+                  title="Remove device"
                   onclick={() => onRemoveKey?.(key)}
                   disabled={keyBusy(key, 'remove')}
                   data-testid="user-remove-key"

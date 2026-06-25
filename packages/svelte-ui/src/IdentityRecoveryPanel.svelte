@@ -49,8 +49,8 @@
     class: className = '',
   }: Props = $props();
 
-  let selected = $state<IdentityRecoveryMethod | null>(method ?? null);
-  let lastPropMethod = $state<IdentityRecoveryMethod | undefined>(method);
+  let selected = $state<IdentityRecoveryMethod | null>(null);
+  let lastPropMethod = $state<IdentityRecoveryMethod | undefined>(undefined);
   let nsec = $state('');
   let seedWords = $state('');
   let seedPassphrase = $state('');
