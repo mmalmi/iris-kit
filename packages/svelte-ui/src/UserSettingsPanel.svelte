@@ -64,12 +64,11 @@
   }
 
   function toggleAddDevice(): void {
-    showAddDevice = !showAddDevice;
-  }
-
-  function createInvite(): void {
-    showAddDevice = true;
-    void onCreateInvite?.();
+    const nextShowAddDevice = !showAddDevice;
+    showAddDevice = nextShowAddDevice;
+    if (nextShowAddDevice && !inviteUrl && !inviteBusy) {
+      void onCreateInvite?.();
+    }
   }
 </script>
 
@@ -112,23 +111,6 @@
 
         {#if showAddDevice}
           <div class="add-device-panel" data-testid="user-add-device-panel">
-            {#if onCreateInvite}
-              <button
-                type="button"
-                class="secondary-button"
-                onclick={createInvite}
-                disabled={inviteBusy}
-                data-testid="user-create-link"
-              >
-                {#if inviteBusy}
-                  <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
-                {:else}
-                  <span class="i-lucide-link" aria-hidden="true"></span>
-                {/if}
-                <span>{inviteUrl ? 'New invite' : 'Create invite'}</span>
-              </button>
-            {/if}
-
             {#if inviteUrl}
               <div class="invite-card">
                 {#if inviteQrUrl}
@@ -151,6 +133,11 @@
                     testId="user-copy-link"
                   />
                 </div>
+              </div>
+            {:else if inviteBusy}
+              <div class="invite-loading" data-testid="user-link-invite-loading">
+                <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
+                <span>Preparing invite...</span>
               </div>
             {/if}
 
@@ -346,6 +333,7 @@
   .copy-row,
   .request-row,
   .key-row,
+  .invite-loading,
   .add-device-section {
     border: 1px solid var(--user-settings-border, #d2d2d7);
     border-radius: 8px;
@@ -385,6 +373,12 @@
 
   .request-count {
     flex: 0 0 auto;
+  }
+
+  .invite-loading {
+    color: var(--user-settings-muted, #6e6e73);
+    font-size: 0.82rem;
+    font-weight: 700;
   }
 
   .invite-card {
