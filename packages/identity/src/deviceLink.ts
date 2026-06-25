@@ -1,7 +1,7 @@
-import { finalizeEvent, getPublicKey, nip19, type Event } from 'nostr-tools';
+import { generateSecretKey, getPublicKey, nip19, type Event } from 'nostr-tools';
 import {
   FACT_OP_KIND,
-  buildIdentityLinkRequestDraft,
+  buildIdentityLinkRequestEvent,
   parseIdentityLinkRequestEvent,
 } from 'nostr-social-graph';
 import {
@@ -13,7 +13,6 @@ import {
   type IrisProfileRosterOpContent,
   type SignedIrisProfileRosterOp,
 } from './profile.ts';
-import type { IrisNostrEventDraft } from './profile.ts';
 import { requireValidSignature } from './profileJson.ts';
 import { irisProfileRosterParentIds } from './profileProjection.ts';
 
@@ -25,15 +24,18 @@ export const KIND_DEVICE_LINK_REQUEST = FACT_OP_KIND;
 export interface DeviceLinkInvite {
   profileId: IrisProfileId;
   adminAppKeyPubkey: string;
-  linkSecret: string;
+  invitePubkey: string;
+}
+
+export interface AdminDeviceLinkInvite extends DeviceLinkInvite {
+  inviteSecretKey: Uint8Array;
 }
 
 export interface DeviceLinkRequest {
   profileId: IrisProfileId;
   adminAppKeyPubkey: string;
+  invitePubkey: string;
   deviceAppKeyPubkey: string;
-  linkSecret?: string;
-  linkSecretHash?: string;
   label?: string;
   requestedAt: number;
 }
@@ -42,21 +44,35 @@ export interface SignedDeviceLinkRequest {
   requestId: string;
   signerPubkey: string;
   request: DeviceLinkRequest;
-  linkSecretHash: string;
   event_json: string;
 }
 
 export interface DeviceLinkRequestScope {
   profileId: IrisProfileId;
   adminAppKeyPubkey: string;
-  linkSecretHash?: string;
+  inviteSecretKey: Uint8Array;
+  invitePubkey?: string;
 }
 
 interface DeviceLinkInvitePayload {
   v: number;
   profileId: string;
   adminAppKeyNpub: string;
-  linkSecret: string;
+  inviteNpub: string;
+}
+
+export function createDeviceLinkInvite(options: {
+  profileId: IrisProfileId;
+  adminAppKeyPubkey: string;
+  inviteSecretKey?: Uint8Array;
+}): AdminDeviceLinkInvite {
+  const inviteSecretKey = options.inviteSecretKey ?? generateSecretKey();
+  return {
+    profileId: options.profileId,
+    adminAppKeyPubkey: requirePubkey(options.adminAppKeyPubkey, 'admin AppKey'),
+    inviteSecretKey,
+    invitePubkey: getPublicKey(inviteSecretKey),
+  };
 }
 
 export function encodeDeviceLinkInvite(invite: DeviceLinkInvite): string {
@@ -64,7 +80,7 @@ export function encodeDeviceLinkInvite(invite: DeviceLinkInvite): string {
     v: DEVICE_LINK_INVITE_VERSION,
     profileId: invite.profileId,
     adminAppKeyNpub: pubkeyToNpub(invite.adminAppKeyPubkey),
-    linkSecret: requireNonEmpty(invite.linkSecret, 'link secret'),
+    inviteNpub: pubkeyToNpub(invite.invitePubkey),
   };
   return `${DEVICE_LINK_INVITE_PREFIX}${base64UrlEncode(JSON.stringify(payload))}`;
 }
@@ -84,7 +100,13 @@ export function isCompleteDeviceLinkInviteInput(input: string): boolean {
   if (!value || /\s/.test(value)) return false;
   if (payloadFromShareInviteUrl(value) !== null) return false;
   const payload = payloadFromInviteUrl(value);
-  if (payload !== null) return payload.length >= 32;
+  if (payload !== null) {
+    try {
+      return parseInviteJson(base64UrlDecode(payload)) !== null;
+    } catch {
+      return false;
+    }
+  }
   return false;
 }
 
@@ -102,74 +124,51 @@ export function createDeviceLinkRequest(options: {
   return {
     profileId: options.invite.profileId,
     adminAppKeyPubkey: options.invite.adminAppKeyPubkey,
+    invitePubkey: options.invite.invitePubkey,
     deviceAppKeyPubkey,
-    linkSecret: options.invite.linkSecret,
     requestedAt: options.requestedAt,
     ...(options.label?.trim() ? { label: options.label.trim() } : {}),
-  };
-}
-
-export function buildDeviceLinkRequestEventDraft(options: {
-  signerPubkey: string;
-  request: DeviceLinkRequest;
-  linkSecretHash: string;
-  clientNonce?: string;
-}): IrisNostrEventDraft {
-  const signerPubkey = requirePubkey(options.signerPubkey, 'device AppKey signer');
-  const deviceAppKeyPubkey = requirePubkey(options.request.deviceAppKeyPubkey, 'device AppKey');
-  if (signerPubkey !== deviceAppKeyPubkey) {
-    throw new Error('device link request must be signed by the requesting AppKey');
-  }
-  const draft = buildIdentityLinkRequestDraft({
-    signerPubkey,
-    identity: options.request.profileId,
-    adminPubkey: options.request.adminAppKeyPubkey,
-    linkSecretHash: requireNonEmpty(options.linkSecretHash, 'link secret hash'),
-    requestedAt: options.request.requestedAt,
-    ...(options.clientNonce !== undefined ? { clientNonce: options.clientNonce } : {}),
-    ...(options.request.label !== undefined ? { label: options.request.label } : {}),
-  });
-  return {
-    kind: draft.kind,
-    content: draft.content,
-    created_at: draft.created_at,
-    tags: draft.tags,
   };
 }
 
 export function signDeviceLinkRequestEvent(options: {
   signerSecretKey: Uint8Array;
   request: DeviceLinkRequest;
-  linkSecretHash: string;
   clientNonce?: string;
 }): Event {
-  return finalizeEvent(buildDeviceLinkRequestEventDraft({
-    signerPubkey: getPublicKey(options.signerSecretKey),
-    request: options.request,
-    linkSecretHash: options.linkSecretHash,
+  const signerPubkey = getPublicKey(options.signerSecretKey);
+  const deviceAppKeyPubkey = requirePubkey(options.request.deviceAppKeyPubkey, 'device AppKey');
+  if (signerPubkey !== deviceAppKeyPubkey) {
+    throw new Error('device link request must be signed by the requesting AppKey');
+  }
+  return buildIdentityLinkRequestEvent({
+    signerSecretKey: options.signerSecretKey,
+    identity: options.request.profileId,
+    adminPubkey: options.request.adminAppKeyPubkey,
+    invitePubkey: options.request.invitePubkey,
+    requestedAt: options.request.requestedAt,
     ...(options.clientNonce !== undefined ? { clientNonce: options.clientNonce } : {}),
-  }), options.signerSecretKey);
+    ...(options.request.label !== undefined ? { label: options.request.label } : {}),
+  });
 }
 
 export function parseDeviceLinkRequestEvent(
   event: Event,
-  scope?: DeviceLinkRequestScope,
+  scope: DeviceLinkRequestScope,
 ): SignedDeviceLinkRequest {
   requireValidSignature(event);
-  const signed = parseIdentityLinkRequestEvent(event);
+  const signed = parseIdentityLinkRequestEvent(event, {
+    inviteSecretKey: scope.inviteSecretKey,
+    identity: scope.profileId,
+    adminPubkey: scope.adminAppKeyPubkey,
+    ...(scope.invitePubkey !== undefined ? { invitePubkey: scope.invitePubkey } : {}),
+  });
   const content = signed.content;
-  if (scope && (
-    content.identity !== scope.profileId
-    || content.adminPubkey !== scope.adminAppKeyPubkey
-    || (scope.linkSecretHash !== undefined && content.linkSecretHash !== scope.linkSecretHash)
-  )) {
-    throw new Error('device link request does not match scope');
-  }
   const request: DeviceLinkRequest = {
     profileId: content.identity,
     adminAppKeyPubkey: content.adminPubkey,
-    deviceAppKeyPubkey: content.keyPubkey,
-    linkSecretHash: content.linkSecretHash,
+    invitePubkey: content.invitePubkey,
+    deviceAppKeyPubkey: content.joiningPubkey,
     requestedAt: content.requestedAt,
     ...(content.label !== undefined ? { label: content.label } : {}),
   };
@@ -177,7 +176,6 @@ export function parseDeviceLinkRequestEvent(
     requestId: signed.requestId,
     signerPubkey: signed.signerPubkey,
     request,
-    linkSecretHash: content.linkSecretHash,
     event_json: JSON.stringify(event),
   };
 }
@@ -238,14 +236,15 @@ function normalizeInvitePayload(payload: DeviceLinkInvitePayload): DeviceLinkInv
   if (version !== DEVICE_LINK_INVITE_VERSION) return null;
   const profileId = payload.profileId;
   const admin = payload.adminAppKeyNpub;
-  const secret = payload.linkSecret;
-  if (!profileId || !admin || !secret) return null;
+  const invite = payload.inviteNpub;
+  if (!profileId || !admin || !invite) return null;
   const adminAppKeyPubkey = npubToPubkey(admin);
-  if (!adminAppKeyPubkey) return null;
+  const invitePubkey = npubToPubkey(invite);
+  if (!adminAppKeyPubkey || !invitePubkey) return null;
   return {
     profileId,
     adminAppKeyPubkey,
-    linkSecret: requireNonEmpty(secret, 'link secret'),
+    invitePubkey,
   };
 }
 
@@ -304,10 +303,4 @@ function requirePubkey(value: string, label: string): string {
   const normalized = normalizeHexPubkey(value);
   if (!normalized) throw new Error(`${label} pubkey must be npub or 64-char hex`);
   return normalized;
-}
-
-function requireNonEmpty(value: string, label: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) throw new Error(`${label} is required`);
-  return trimmed;
 }

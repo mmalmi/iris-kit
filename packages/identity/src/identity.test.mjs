@@ -6,6 +6,7 @@ import {
   attachIrisAppKeyToProfile,
   approveDeviceLinkRequest,
   createAttachedIrisIdentitySession,
+  createDeviceLinkInvite,
   createDeviceLinkRequest,
   createIrisIdentitySignerFromNip07,
   createIrisIdentitySignerFromNip46,
@@ -34,12 +35,16 @@ import {
 
 const profileId = '019ed693-4110-7352-8cc3-be90158ba91e';
 
-test('device link invite round trips profile, admin AppKey, and secret', () => {
+test('device link invite round trips profile, admin AppKey, and invite pubkey', () => {
   const admin = getPublicKey(generateSecretKey());
+  const invite = createDeviceLinkInvite({
+    profileId,
+    adminAppKeyPubkey: admin,
+  });
   const inviteUrl = encodeDeviceLinkInvite({
     profileId,
     adminAppKeyPubkey: admin,
-    linkSecret: ' join-secret ',
+    invitePubkey: invite.invitePubkey,
   });
   const parsed = parseDeviceLinkInvite(inviteUrl);
 
@@ -47,17 +52,21 @@ test('device link invite round trips profile, admin AppKey, and secret', () => {
   assert.deepEqual(parsed, {
     profileId,
     adminAppKeyPubkey: admin,
-    linkSecret: 'join-secret',
+    invitePubkey: invite.invitePubkey,
   });
   assert.equal(isCompleteDeviceLinkInviteInput(inviteUrl), true);
 });
 
 test('device link invites are drive.iris.to links, not custom-scheme links', () => {
   const admin = getPublicKey(generateSecretKey());
+  const invite = createDeviceLinkInvite({
+    profileId,
+    adminAppKeyPubkey: admin,
+  });
   const inviteUrl = encodeDeviceLinkInvite({
     profileId,
     adminAppKeyPubkey: admin,
-    linkSecret: 'join-secret',
+    invitePubkey: invite.invitePubkey,
   });
   const legacyUrl = inviteUrl.replace('https://drive.iris.to/invite/', 'iris-drive://invite/');
 
@@ -66,15 +75,11 @@ test('device link invites are drive.iris.to links, not custom-scheme links', () 
   assert.equal(isCompleteDeviceLinkInviteInput(legacyUrl), false);
 });
 
-test('device link parser accepts current native HTTPS invite payloads', () => {
+test('device link parser rejects legacy link-secret invite payloads', () => {
   const inviteUrl = 'https://drive.iris.to/invite/eyJ2IjoxLCJwcm9maWxlSWQiOiIzYzA4OWRmOC0yMjFlLTQ3M2MtOTFlYy1mNzcxYzAxNWM4YmQiLCJhZG1pbkFwcEtleU5wdWIiOiJucHViMXE1bDB2bmVhamg2Mjg5dmduZ3N3dTV3bTI2cWFtc2p3dHlqajJncWxwa3VqNXptZGVkeXMweTZtdDciLCJsaW5rU2VjcmV0IjoiazV3NUpMR2hUQ09sSWdPQUtpRnUtUSJ9';
 
-  assert.deepEqual(parseDeviceLinkInvite(inviteUrl), {
-    profileId: '3c089df8-221e-473c-91ec-f771c015c8bd',
-    adminAppKeyPubkey: '053ef64f3d95f4a395889a20ee51db5681ddc24e592525201f0db92a0b6dcb49',
-    linkSecret: 'k5w5JLGhTCOlIgOAKiFu-Q',
-  });
-  assert.equal(isCompleteDeviceLinkInviteInput(inviteUrl), true);
+  assert.equal(parseDeviceLinkInvite(inviteUrl), null);
+  assert.equal(isCompleteDeviceLinkInviteInput(inviteUrl), false);
 });
 
 test('admin approval projects the requested device as an AppKey facet', () => {
@@ -105,7 +110,7 @@ test('admin approval projects the requested device as an AppKey facet', () => {
   const invite = parseDeviceLinkInvite(encodeDeviceLinkInvite({
     profileId,
     adminAppKeyPubkey: admin,
-    linkSecret: 'join-secret',
+    invitePubkey: getPublicKey(generateSecretKey()),
   }));
   assert.ok(invite);
   const request = createDeviceLinkRequest({
@@ -140,12 +145,14 @@ test('admin approval projects the requested device as an AppKey facet', () => {
 
 test('device link requests are signed identity fact events without raw invite secrets', async () => {
   const admin = getPublicKey(generateSecretKey());
+  const inviteSecret = generateSecretKey();
+  const invitePubkey = getPublicKey(inviteSecret);
   const deviceSecret = generateSecretKey();
   const device = getPublicKey(deviceSecret);
   const invite = parseDeviceLinkInvite(encodeDeviceLinkInvite({
     profileId,
     adminAppKeyPubkey: admin,
-    linkSecret: 'join-secret',
+    invitePubkey,
   }));
   assert.ok(invite);
   const request = createDeviceLinkRequest({
@@ -157,29 +164,32 @@ test('device link requests are signed identity fact events without raw invite se
   const event = signDeviceLinkRequestEvent({
     signerSecretKey: deviceSecret,
     request,
-    linkSecretHash: 'hash-from-invite',
     clientNonce: 'link-request',
   });
 
   assert.equal(event.kind, KIND_IRIS_PROFILE_ROSTER_OP);
-  assert.equal(event.content, '');
+  assert.notEqual(event.content, '');
   assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'nostr_identity_link_request'));
-  assert.ok(event.tags.some((tag) => tag[0] === 'admin_pubkey' && tag[1] === admin));
-  assert.ok(event.tags.some((tag) => tag[0] === 'key_pubkey' && tag[1] === device));
-  assert.ok(event.tags.some((tag) => tag[0] === 'link_secret_hash' && tag[1] === 'hash-from-invite'));
-  assert.equal(JSON.stringify(event).includes('join-secret'), false);
+  assert.ok(event.tags.some((tag) => tag[0] === 'p' && tag[1] === invitePubkey));
+  assert.equal(event.tags.some((tag) => tag[0] === 'admin_pubkey'), false);
+  assert.equal(event.tags.some((tag) => tag[0] === 'key_pubkey'), false);
+  assert.equal(event.tags.some((tag) => tag[0] === 'joining_pubkey'), false);
+  assert.equal(event.tags.some((tag) => tag[0] === 'link_secret_hash'), false);
+  assert.equal(JSON.stringify(event).includes(admin), false);
+  assert.equal(event.content.includes(device), false);
 
   const signed = parseDeviceLinkRequestEvent(event, {
     profileId,
     adminAppKeyPubkey: admin,
-    linkSecretHash: 'hash-from-invite',
+    invitePubkey,
+    inviteSecretKey: inviteSecret,
   });
   assert.equal(signed.signerPubkey, device);
   assert.deepEqual(signed.request, {
     profileId,
     adminAppKeyPubkey: admin,
+    invitePubkey,
     deviceAppKeyPubkey: device,
-    linkSecretHash: 'hash-from-invite',
     requestedAt: 15,
     label: 'Phone',
   });
@@ -844,10 +854,11 @@ test('AppKey attach rejects signers without admin or recovery capability', async
 
 test('pending device-link session keeps invite identity and request material', () => {
   const admin = getPublicKey(generateSecretKey());
+  const invitePubkey = getPublicKey(generateSecretKey());
   const invite = encodeDeviceLinkInvite({
     profileId,
     adminAppKeyPubkey: admin,
-    linkSecret: 'join-secret',
+    invitePubkey,
   });
   const session = createPendingDeviceLinkSession({
     invite,
@@ -859,5 +870,6 @@ test('pending device-link session keeps invite identity and request material', (
   assert.equal(session.profileId, profileId);
   assert.equal(session.status, 'pending_device_link');
   assert.equal(session.pendingDeviceLink?.adminAppKeyPubkey, admin);
+  assert.equal(session.pendingDeviceLink?.invitePubkey, invitePubkey);
   assert.equal(session.pendingDeviceLink?.deviceAppKeyPubkey, session.appKeyPubkey);
 });
