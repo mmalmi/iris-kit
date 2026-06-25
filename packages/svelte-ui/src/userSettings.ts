@@ -23,7 +23,7 @@ export interface UserSettingsPendingRequest {
 }
 
 export function userSettingsKeyLabel(key: UserSettingsKey): string {
-  return key.label?.trim() || (key.current ? 'This device' : 'Linked key');
+  return key.label?.trim() || (key.current ? 'This device' : 'Device');
 }
 
 export function userSettingsCapabilityLabels(

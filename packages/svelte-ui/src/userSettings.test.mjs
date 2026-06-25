@@ -23,11 +23,17 @@ test('UserSettingsPanel is exported as a shared Svelte UI component', () => {
 test('user settings panel exposes expected user management actions', () => {
   assert.match(panelSource, /user-settings-panel/);
   assert.match(panelSource, /user-create-link/);
+  assert.match(panelSource, /user-add-device-toggle/);
   assert.match(panelSource, /user-approve-link/);
   assert.match(panelSource, /user-grant-admin/);
   assert.match(panelSource, /user-revoke-admin/);
   assert.match(panelSource, /user-remove-key/);
-  assert.match(panelSource, /Link another device/);
+  assert.match(panelSource, /user-link-invite-qr/);
+  assert.match(panelSource, /inviteQrUrl/);
+  assert.match(panelSource, /Add Device/);
+  assert.match(panelSource, /Device requests/);
+  assert.doesNotMatch(panelSource, /User keys/);
+  assert.doesNotMatch(panelSource, /Linked keys/);
   assert.doesNotMatch(panelSource, /Current identity/);
   assert.doesNotMatch(panelSource, /shortUserKey/);
 });
@@ -35,7 +41,7 @@ test('user settings panel exposes expected user management actions', () => {
 test('user settings helpers format key labels and capabilities', () => {
   assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: ' Laptop ' }), 'Laptop');
   assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), current: true }), 'This device');
-  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64) }), 'Linked key');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64) }), 'Device');
   assert.deepEqual(userSettingsCapabilityLabels({
     can_admin_profile: true,
     can_write_roots: true,

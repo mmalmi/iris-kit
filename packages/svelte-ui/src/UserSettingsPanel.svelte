@@ -13,6 +13,7 @@
     keys?: UserSettingsKey[];
     pendingRequests?: UserSettingsPendingRequest[];
     inviteUrl?: string;
+    inviteQrUrl?: string;
     canManage?: boolean;
     inviteBusy?: boolean;
     actionBusyKey?: string;
@@ -30,6 +31,7 @@
     keys = [],
     pendingRequests = [],
     inviteUrl = '',
+    inviteQrUrl = '',
     canManage = false,
     inviteBusy = false,
     actionBusyKey = '',
@@ -47,12 +49,27 @@
       || left.pubkey.localeCompare(right.pubkey)),
   );
 
+  let showAddDevice = $state(false);
+
+  $effect(() => {
+    if (pendingRequests.length > 0) showAddDevice = true;
+  });
+
   function keyBusy(key: UserSettingsKey, action: string): boolean {
     return actionBusyKey === `${action}:${key.pubkey}`;
   }
 
   function requestBusy(request: UserSettingsPendingRequest): boolean {
     return actionBusyKey === `approve:${request.id}`;
+  }
+
+  function toggleAddDevice(): void {
+    showAddDevice = !showAddDevice;
+  }
+
+  function createInvite(): void {
+    showAddDevice = true;
+    void onCreateInvite?.();
   }
 </script>
 
@@ -69,82 +86,109 @@
     </div>
   </section>
 
-  <section class="panel-section" data-testid="user-settings-link">
+  <section class="panel-section" data-testid="user-settings-devices">
     <div class="section-heading">
       <div>
-        <h4>Linked keys</h4>
+        <h4>Devices</h4>
       </div>
-      {#if canManage && onCreateInvite}
+    </div>
+
+    {#if canManage}
+      <div class="add-device-section" data-testid="user-add-device-section">
         <button
           type="button"
-          class="secondary-button"
-          onclick={() => onCreateInvite?.()}
-          disabled={inviteBusy}
-          data-testid="user-create-link"
+          class="add-device-toggle"
+          onclick={toggleAddDevice}
+          aria-expanded={showAddDevice}
+          data-testid="user-add-device-toggle"
         >
-          {#if inviteBusy}
-            <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
-          {:else}
-            <span class="i-lucide-link" aria-hidden="true"></span>
+          <span class="i-lucide-plus" aria-hidden="true"></span>
+          <span>Add Device</span>
+          {#if pendingRequests.length > 0}
+            <span class="request-count">{pendingRequests.length} request{pendingRequests.length === 1 ? '' : 's'}</span>
           {/if}
-          <span>Link another device</span>
+          <span class={`i-lucide-chevron-right add-device-chevron ${showAddDevice ? 'open' : ''}`} aria-hidden="true"></span>
         </button>
-      {/if}
-    </div>
 
-    {#if inviteUrl}
-      <div class="copy-row" data-testid="user-link-invite">
-        <span class="copy-value">{inviteUrl}</span>
-        <CopyButton
-          text={inviteUrl}
-          label="Copy"
-          copiedLabel="Copied"
-          class="copy-button"
-          iconClass="i-lucide-copy"
-          copiedIconClass="i-lucide-check"
-          testId="user-copy-link"
-        />
-      </div>
-    {/if}
-
-    {#if pendingRequests.length > 0}
-      <div class="request-list">
-        {#each pendingRequests as request (request.id)}
-          <div class="request-row" data-testid="user-link-request">
-            <div>
-              <strong>{request.label?.trim() || 'New device'}</strong>
-              <span>Waiting to be linked</span>
-            </div>
-            {#if canManage && onApproveRequest}
+        {#if showAddDevice}
+          <div class="add-device-panel" data-testid="user-add-device-panel">
+            {#if onCreateInvite}
               <button
                 type="button"
-                class="primary-button"
-                onclick={() => onApproveRequest?.(request)}
-                disabled={requestBusy(request)}
-                data-testid="user-approve-link"
+                class="secondary-button"
+                onclick={createInvite}
+                disabled={inviteBusy}
+                data-testid="user-create-link"
               >
-                {#if requestBusy(request)}
+                {#if inviteBusy}
                   <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
                 {:else}
-                  <span class="i-lucide-check" aria-hidden="true"></span>
+                  <span class="i-lucide-link" aria-hidden="true"></span>
                 {/if}
-                <span>Approve</span>
+                <span>{inviteUrl ? 'New invite' : 'Create invite'}</span>
               </button>
             {/if}
+
+            {#if inviteUrl}
+              <div class="invite-card">
+                {#if inviteQrUrl}
+                  <img
+                    class="invite-qr"
+                    src={inviteQrUrl}
+                    alt="Add Device QR code"
+                    data-testid="user-link-invite-qr"
+                  />
+                {/if}
+                <div class="copy-row" data-testid="user-link-invite">
+                  <span class="copy-value">{inviteUrl}</span>
+                  <CopyButton
+                    text={inviteUrl}
+                    label="Copy"
+                    copiedLabel="Copied"
+                    class="copy-button"
+                    iconClass="i-lucide-copy"
+                    copiedIconClass="i-lucide-check"
+                    testId="user-copy-link"
+                  />
+                </div>
+              </div>
+            {/if}
+
+            {#if pendingRequests.length > 0}
+              <div class="request-list">
+                <h5>Device requests</h5>
+                {#each pendingRequests as request (request.id)}
+                  <div class="request-row" data-testid="user-link-request">
+                    <div>
+                      <strong>{request.label?.trim() || 'New device'}</strong>
+                      <span>Waiting to be linked</span>
+                    </div>
+                    {#if onApproveRequest}
+                      <button
+                        type="button"
+                        class="primary-button"
+                        onclick={() => onApproveRequest?.(request)}
+                        disabled={requestBusy(request)}
+                        data-testid="user-approve-link"
+                      >
+                        {#if requestBusy(request)}
+                          <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
+                        {:else}
+                          <span class="i-lucide-check" aria-hidden="true"></span>
+                        {/if}
+                        <span>Add</span>
+                      </button>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+            {/if}
           </div>
-        {/each}
+        {/if}
       </div>
     {/if}
-  </section>
 
-  <section class="panel-section" data-testid="user-settings-keys">
-    <div class="section-heading">
-      <div>
-        <h4>User keys</h4>
-      </div>
-    </div>
-
-    <div class="key-list">
+    <div class="key-list" data-testid="user-settings-keys">
       {#each sortedKeys as key (key.pubkey)}
         {@const labels = userSettingsCapabilityLabels(key.capabilities)}
         {@const isAdmin = Boolean(key.capabilities?.can_admin_profile)}
@@ -204,7 +248,7 @@
           {/if}
         </div>
       {:else}
-        <p class="empty">No user keys found.</p>
+        <p class="empty">No devices found.</p>
       {/each}
     </div>
   </section>
@@ -249,6 +293,7 @@
 
   h3,
   h4,
+  h5,
   p {
     margin: 0;
   }
@@ -263,9 +308,15 @@
     font-weight: 760;
   }
 
+  h5 {
+    font-size: 0.84rem;
+    font-weight: 760;
+  }
+
   p,
   .request-row span,
   .copy-value,
+  .request-count,
   .empty {
     color: var(--user-settings-muted, #6e6e73);
     font-size: 0.82rem;
@@ -280,7 +331,8 @@
   .section-heading,
   .key-row,
   .request-row,
-  .copy-row {
+  .copy-row,
+  .add-device-toggle {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -293,11 +345,62 @@
 
   .copy-row,
   .request-row,
-  .key-row {
+  .key-row,
+  .add-device-section {
     border: 1px solid var(--user-settings-border, #d2d2d7);
     border-radius: 8px;
     background: var(--user-settings-row, #fff);
     padding: 10px;
+  }
+
+  .add-device-section,
+  .add-device-panel,
+  .invite-card {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .add-device-toggle {
+    width: 100%;
+    min-height: 36px;
+    justify-content: flex-start;
+    border: 0;
+    background: transparent;
+    padding: 0;
+  }
+
+  .add-device-toggle > span:nth-child(2) {
+    flex: 1;
+    text-align: left;
+  }
+
+  .add-device-chevron {
+    transition: transform 0.15s ease;
+  }
+
+  .add-device-chevron.open {
+    transform: rotate(90deg);
+  }
+
+  .request-count {
+    flex: 0 0 auto;
+  }
+
+  .invite-card {
+    justify-items: center;
+  }
+
+  .invite-qr {
+    width: min(220px, 100%);
+    aspect-ratio: 1;
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px;
+  }
+
+  .invite-card .copy-row {
+    width: 100%;
   }
 
   .copy-value,
@@ -407,13 +510,15 @@
 
   @media (max-width: 560px) {
     .key-row,
-    .request-row {
+    .request-row,
+    .copy-row {
       align-items: stretch;
       flex-direction: column;
     }
 
     .key-actions,
-    .request-row button {
+    .request-row button,
+    .copy-button {
       width: 100%;
     }
   }
