@@ -10,6 +10,8 @@
   interface Props {
     method?: IdentityRecoveryMethod;
     methods?: IdentityRecoveryMethod[];
+    initialRequest?: IdentityRecoveryRequest | null;
+    autoSubmitInitial?: boolean;
     methodLayout?: 'grid' | 'column';
     disabled?: boolean;
     submitLabel?: string;
@@ -32,6 +34,8 @@
   let {
     method = undefined,
     methods = undefined,
+    initialRequest = null,
+    autoSubmitInitial = false,
     methodLayout = 'grid',
     disabled = false,
     submitLabel = 'Continue',
@@ -60,6 +64,7 @@
   let nip46Relay = $state('');
   let submittingImmediate = $state(false);
   let creatingImmediate = $state(false);
+  let appliedInitialRequestKey = $state('');
 
   const errorId = `iris-identity-recovery-${Math.random().toString(36).slice(2)}-error`;
   const effectiveCreateNewBusy = $derived(createNewBusy || creatingImmediate);
@@ -102,6 +107,20 @@
   });
 
   $effect(() => {
+    const request = initialRequest;
+    if (!request) return;
+    const key = identityRecoveryRequestKey(request);
+    if (key === appliedInitialRequestKey) return;
+    if (effectiveDisabled || (request.method === 'nip07' && !nostrAvailable)) return;
+
+    appliedInitialRequestKey = key;
+    applyIdentityRecoveryRequest(request);
+    if (autoSubmitInitial && identityRecoveryRequestHasInput(request)) {
+      void submitIdentityRecoveryRequest(request);
+    }
+  });
+
+  $effect(() => {
     if (selected === 'nip07') {
       selected = null;
     }
@@ -112,12 +131,7 @@
     onMethodChange?.(nextMethod);
     if (nextMethod === 'nip07') {
       if (!nostrAvailable || submittingImmediate) return;
-      submittingImmediate = true;
-      try {
-        await onSubmit?.({ method: 'nip07' });
-      } finally {
-        submittingImmediate = false;
-      }
+      await submitIdentityRecoveryRequest({ method: 'nip07' });
       return;
     }
     selected = nextMethod;
@@ -140,6 +154,16 @@
     await onSubmit?.(normalizeIdentityRecoveryRequest(request));
   }
 
+  async function submitIdentityRecoveryRequest(nextRequest: IdentityRecoveryRequest): Promise<void> {
+    if (submittingImmediate) return;
+    submittingImmediate = true;
+    try {
+      await onSubmit?.(normalizeIdentityRecoveryRequest(nextRequest));
+    } finally {
+      submittingImmediate = false;
+    }
+  }
+
   async function createNew(): Promise<void> {
     if (!canCreateNew || !onCreateNew) return;
     creatingImmediate = true;
@@ -148,6 +172,26 @@
     } finally {
       creatingImmediate = false;
     }
+  }
+
+  function applyIdentityRecoveryRequest(nextRequest: IdentityRecoveryRequest): void {
+    selected = nextRequest.method;
+    nsec = nextRequest.nsec ?? '';
+    seedWords = nextRequest.seedWords ?? '';
+    seedPassphrase = nextRequest.seedPassphrase ?? '';
+    nip46Connection = nextRequest.nip46Connection ?? '';
+    nip46Relay = nextRequest.nip46Relay ?? '';
+  }
+
+  function identityRecoveryRequestKey(nextRequest: IdentityRecoveryRequest): string {
+    return JSON.stringify({
+      method: nextRequest.method,
+      nsec: nextRequest.nsec ?? '',
+      seedWords: nextRequest.seedWords ?? '',
+      seedPassphrase: nextRequest.seedPassphrase ?? '',
+      nip46Connection: nextRequest.nip46Connection ?? '',
+      nip46Relay: nextRequest.nip46Relay ?? '',
+    });
   }
 </script>
 
