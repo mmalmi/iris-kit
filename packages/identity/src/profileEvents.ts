@@ -245,17 +245,20 @@ export function identityRosterProjectionToIris(
   return {
     profile_id: projection.identity,
     active_facets: Object.fromEntries(
-      Object.entries(projection.activeKeys).map(([pubkey, key]) => [
-        pubkey,
-        {
-          pubkey: key.pubkey,
-          ...(key.subject !== undefined ? { profile_id: key.subject } : {}),
-          ...(key.purposes.length ? { purposes: key.purposes.map(identityPurposeToIris) } : {}),
-          capabilities: identityCapabilitiesToIris(key.capabilities),
-          added_at: key.addedAt,
-          ...(key.label !== undefined ? { label: key.label } : {}),
-        },
-      ]),
+      Object.entries(projection.activeKeys).map(([pubkey, key]) => {
+        const purposes = (key.purposes ?? []).map(identityPurposeToIris);
+        return [
+          pubkey,
+          {
+            pubkey: key.pubkey,
+            ...(key.subject !== undefined ? { profile_id: key.subject } : {}),
+            ...(purposes.length ? { purposes } : {}),
+            capabilities: identityCapabilitiesToIris(key.capabilities),
+            added_at: key.addedAt,
+            ...(key.label !== undefined ? { label: key.label } : {}),
+          },
+        ];
+      }),
     ),
     tombstones: Object.fromEntries(
       Object.entries(projection.tombstones).map(([pubkey, tombstone]) => [
@@ -287,7 +290,7 @@ export function identityRosterProjectionToIris(
 
 export function identityRosterOpToIrisProfile(op: IdentityRosterOp): IrisProfileRosterOp {
   if (op.op === 'add_key') {
-    const purposes = op.key.purposes.map(identityPurposeToIris);
+    const purposes = (op.key.purposes ?? []).map(identityPurposeToIris);
     return {
       op: 'add_facet',
       facet: {
@@ -356,7 +359,7 @@ function irisCapabilitiesToIdentity(capabilities: IrisProfileCapabilities): Iden
   ].sort();
 }
 
-function identityCapabilitiesToIris(capabilities: IdentityKeyCapability[]): IrisProfileCapabilities {
+function identityCapabilitiesToIris(capabilities: IdentityKeyCapability[] = []): IrisProfileCapabilities {
   const iris: IrisProfileCapabilities = {};
   for (const capability of capabilities) {
     if (capability === IDENTITY_CAPABILITY_WRITE) iris.can_write_roots = true;

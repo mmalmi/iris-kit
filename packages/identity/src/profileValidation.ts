@@ -1,11 +1,15 @@
 import type { Event } from 'nostr-tools';
-import type { SharedFolder, SignedIrisProfileRosterOp } from './profile.ts';
+import type { SignedIrisProfileRosterOp } from './profile.ts';
 import { stableStringify } from './profileJson.ts';
 import { parseIrisProfileRosterOpEvent } from './profileEvents.ts';
 import { normalizeIrisProfileRosterOpContent } from './profileNormalize.ts';
 
-export function validateSignedIrisProfileRosterOps(folder: SharedFolder): void {
-  for (const signed of folder.roster_ops ?? []) {
+export interface IrisProfileRosterOpsContainer {
+  roster_ops?: SignedIrisProfileRosterOp[];
+}
+
+export function validateSignedIrisProfileRosterOps(container: IrisProfileRosterOpsContainer): void {
+  for (const signed of container.roster_ops ?? []) {
     validateSignedIrisProfileRosterOp(signed);
   }
 }

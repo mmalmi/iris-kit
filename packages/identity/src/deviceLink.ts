@@ -111,7 +111,7 @@ export function isCompleteDeviceLinkInviteInput(input: string): boolean {
 }
 
 export function deviceLinkInviteWebUrl(inviteUrl: string): string {
-  return inviteUrl.replacen(DEVICE_LINK_INVITE_PREFIX, DEVICE_LINK_INVITE_WEB_PREFIX, 1);
+  return inviteUrl.replace(DEVICE_LINK_INVITE_PREFIX, DEVICE_LINK_INVITE_WEB_PREFIX);
 }
 
 export function createDeviceLinkRequest(options: {
