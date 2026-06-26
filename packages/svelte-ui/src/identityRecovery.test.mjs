@@ -36,6 +36,7 @@ test('identity recovery methods cover supported recovery options', () => {
   assert.match(panelSource, /methods/);
   assert.match(panelSource, /initialRequest/);
   assert.match(panelSource, /autoSubmitInitial/);
+  assert.match(panelSource, /shouldAutoSubmit/);
   assert.match(panelSource, /showCreateNew/);
   assert.match(panelSource, /onCreateNew/);
   assert.match(panelSource, /selected === 'nip07'/);

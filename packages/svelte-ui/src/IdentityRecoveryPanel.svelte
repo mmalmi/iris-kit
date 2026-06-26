@@ -24,6 +24,7 @@
     createNewBusy?: boolean;
     createNewDisabled?: boolean;
     createNewTestId?: string;
+    shouldAutoSubmit?: (request: IdentityRecoveryRequest) => boolean;
     onMethodChange?: (method: IdentityRecoveryMethod) => void;
     onSubmit?: (request: IdentityRecoveryRequest) => void | Promise<void>;
     onCreateNew?: () => void | Promise<void>;
@@ -48,6 +49,7 @@
     createNewBusy = false,
     createNewDisabled = false,
     createNewTestId = 'identity-recovery-create-new',
+    shouldAutoSubmit = undefined,
     onMethodChange = undefined,
     onSubmit = undefined,
     onCreateNew = undefined,
@@ -65,6 +67,7 @@
   let submittingImmediate = $state(false);
   let creatingImmediate = $state(false);
   let appliedInitialRequestKey = $state('');
+  let autoSubmittedRequestKey = $state('');
 
   const errorId = `iris-identity-recovery-${Math.random().toString(36).slice(2)}-error`;
   const effectiveCreateNewBusy = $derived(createNewBusy || creatingImmediate);
@@ -118,6 +121,18 @@
     if (autoSubmitInitial && identityRecoveryRequestHasInput(request)) {
       void submitIdentityRecoveryRequest(request);
     }
+  });
+
+  $effect(() => {
+    const currentRequest = request;
+    if (!currentRequest || !shouldAutoSubmit || effectiveDisabled) return;
+    if (!identityRecoveryRequestHasInput(currentRequest)) return;
+    if (!shouldAutoSubmit(currentRequest)) return;
+    const key = identityRecoveryRequestKey(currentRequest);
+    if (key === autoSubmittedRequestKey) return;
+
+    autoSubmittedRequestKey = key;
+    void submitIdentityRecoveryRequest(currentRequest);
   });
 
   $effect(() => {
