@@ -1,20 +1,20 @@
 import { finalizeEvent, getPublicKey, nip19, nip44, verifyEvent, type Event } from 'nostr-tools';
 import { privateKeyFromSeedWords, validateWords } from 'nostr-tools/nip06';
-import { normalizeHexPubkey, type IrisNostrEventDraft } from './profile.ts';
+import { normalizeHexPubkey, type NostrIdentityEventDraft } from './profile.ts';
 
 export type Awaitable<T> = T | Promise<T>;
 
-export interface IrisIdentityEventSigner {
+export interface NostrIdentityEventSigner {
   readonly method: 'secret_key' | 'nsec' | 'seed_phrase' | 'nip07' | 'nip46' | 'custom';
   getPublicKey(): Awaitable<string>;
-  signEvent(draft: IrisNostrEventDraft): Awaitable<Event>;
+  signEvent(draft: NostrIdentityEventDraft): Awaitable<Event>;
   nip44Encrypt?(recipientPubkey: string, plaintext: string): Awaitable<string>;
   nip44Decrypt?(senderPubkey: string, ciphertext: string): Awaitable<string>;
 }
 
 export interface Nip07LikeSigner {
   getPublicKey(): Promise<string>;
-  signEvent(draft: IrisNostrEventDraft): Promise<Event>;
+  signEvent(draft: NostrIdentityEventDraft): Promise<Event>;
   nip44?: {
     encrypt(recipientPubkey: string, plaintext: string): Promise<string>;
     decrypt(senderPubkey: string, ciphertext: string): Promise<string>;
@@ -23,15 +23,15 @@ export interface Nip07LikeSigner {
 
 export interface Nip46LikeSigner {
   getPublicKey(): Awaitable<string>;
-  signEvent(draft: IrisNostrEventDraft): Awaitable<Event>;
+  signEvent(draft: NostrIdentityEventDraft): Awaitable<Event>;
   nip44Encrypt?(recipientPubkey: string, plaintext: string): Awaitable<string>;
   nip44Decrypt?(senderPubkey: string, ciphertext: string): Awaitable<string>;
 }
 
-export function createIrisIdentitySignerFromSecretKey(
+export function createNostrIdentitySignerFromSecretKey(
   secretKey: Uint8Array,
-  method: IrisIdentityEventSigner['method'] = 'secret_key',
-): IrisIdentityEventSigner {
+  method: NostrIdentityEventSigner['method'] = 'secret_key',
+): NostrIdentityEventSigner {
   const signerPubkey = getPublicKey(secretKey);
   return {
     method,
@@ -48,23 +48,23 @@ export function createIrisIdentitySignerFromSecretKey(
   };
 }
 
-export function createIrisIdentitySignerFromNsec(nsec: string): IrisIdentityEventSigner {
-  return createIrisIdentitySignerFromSecretKey(decodeNsecSecretKey(nsec), 'nsec');
+export function createNostrIdentitySignerFromNsec(nsec: string): NostrIdentityEventSigner {
+  return createNostrIdentitySignerFromSecretKey(decodeNsecSecretKey(nsec), 'nsec');
 }
 
-export function createIrisIdentitySignerFromSeedPhrase(options: {
+export function createNostrIdentitySignerFromSeedPhrase(options: {
   seedWords: string;
   passphrase?: string;
-}): IrisIdentityEventSigner {
+}): NostrIdentityEventSigner {
   const seedWords = normalizeSeedWords(options.seedWords);
   if (!validateWords(seedWords)) throw new Error('invalid seed phrase');
-  return createIrisIdentitySignerFromSecretKey(
+  return createNostrIdentitySignerFromSecretKey(
     privateKeyFromSeedWords(seedWords, options.passphrase),
     'seed_phrase',
   );
 }
 
-export function createIrisIdentitySignerFromNip07(nostr: Nip07LikeSigner): IrisIdentityEventSigner {
+export function createNostrIdentitySignerFromNip07(nostr: Nip07LikeSigner): NostrIdentityEventSigner {
   return {
     method: 'nip07',
     getPublicKey: () => nostr.getPublicKey(),
@@ -87,8 +87,8 @@ export function createIrisIdentitySignerFromNip07(nostr: Nip07LikeSigner): IrisI
   };
 }
 
-export function createIrisIdentitySignerFromNip46(signer: Nip46LikeSigner): IrisIdentityEventSigner {
-  return createIrisIdentitySignerFromCustom({
+export function createNostrIdentitySignerFromNip46(signer: Nip46LikeSigner): NostrIdentityEventSigner {
+  return createNostrIdentitySignerFromCustom({
     method: 'nip46',
     getPublicKey: () => signer.getPublicKey(),
     signEvent: (draft) => signer.signEvent(draft),
@@ -107,13 +107,13 @@ export function createIrisIdentitySignerFromNip46(signer: Nip46LikeSigner): Iris
   });
 }
 
-export function createIrisIdentitySignerFromCustom(options: {
-  method?: IrisIdentityEventSigner['method'];
+export function createNostrIdentitySignerFromCustom(options: {
+  method?: NostrIdentityEventSigner['method'];
   getPublicKey: () => Awaitable<string>;
-  signEvent: (draft: IrisNostrEventDraft) => Awaitable<Event>;
+  signEvent: (draft: NostrIdentityEventDraft) => Awaitable<Event>;
   nip44Encrypt?: (recipientPubkey: string, plaintext: string) => Awaitable<string>;
   nip44Decrypt?: (senderPubkey: string, ciphertext: string) => Awaitable<string>;
-}): IrisIdentityEventSigner {
+}): NostrIdentityEventSigner {
   return {
     method: options.method ?? 'custom',
     getPublicKey: options.getPublicKey,
@@ -148,12 +148,12 @@ function normalizeSeedWords(seedWords: string): string {
   return seedWords.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-function cloneDraft(draft: IrisNostrEventDraft): IrisNostrEventDraft {
+function cloneDraft(draft: NostrIdentityEventDraft): NostrIdentityEventDraft {
   return {
     kind: draft.kind,
     content: draft.content,
     created_at: draft.created_at,
-    tags: draft.tags.map((tag) => tag.slice()),
+    tags: draft.tags.map((tag: string[]) => tag.slice()),
   };
 }
 
@@ -163,7 +163,7 @@ function requireHexPubkey(value: string, label: string): string {
   return normalized;
 }
 
-function validateSignedDraft(event: Event, draft: IrisNostrEventDraft, expectedPubkey: string): void {
+function validateSignedDraft(event: Event, draft: NostrIdentityEventDraft, expectedPubkey: string): void {
   const normalizedExpectedPubkey = normalizeHexPubkey(expectedPubkey);
   if (!normalizedExpectedPubkey) throw new Error('expected signer pubkey must be 64-char hex');
   if (event.kind !== draft.kind) throw new Error('signed event kind mismatch');

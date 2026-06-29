@@ -1,7 +1,7 @@
 import { nip19 } from 'nostr-tools';
-import type { IrisProfileRosterProjection } from './profile.ts';
+import type { NostrIdentityRosterProjection } from './profile.ts';
 
-export interface NostrProfileEventLike {
+export interface NostrMetadataEventLike {
   kind: number;
   pubkey: string;
   created_at?: number;
@@ -13,11 +13,11 @@ export interface RepresentativeProfile {
   npub: string;
   created_at: number;
   profile: Record<string, unknown>;
-  event: NostrProfileEventLike;
+  event: NostrMetadataEventLike;
 }
 
 export function representativeProfileAuthors(
-  projection: IrisProfileRosterProjection,
+  projection: NostrIdentityRosterProjection,
 ): string[] {
   return Object.values(projection.active_facets)
     .map((facet) => facet.pubkey)
@@ -26,8 +26,8 @@ export function representativeProfileAuthors(
 }
 
 export function selectLatestRepresentativeProfileEvent(
-  projection: IrisProfileRosterProjection,
-  events: NostrProfileEventLike[],
+  projection: NostrIdentityRosterProjection,
+  events: NostrMetadataEventLike[],
 ): RepresentativeProfile | null {
   const authors = new Set(representativeProfileAuthors(projection));
   const candidates = events

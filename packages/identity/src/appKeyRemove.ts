@@ -1,71 +1,71 @@
 import type { Event } from 'nostr-tools';
 import {
   normalizeHexPubkey,
-  type IrisProfileId,
-  type IrisProfileRosterProjection,
-  type SignedIrisProfileRosterOp,
+  type NostrIdentityId,
+  type NostrIdentityRosterProjection,
+  type SignedNostrIdentityRosterOp,
 } from './profile.ts';
 import {
-  irisProfileRosterParentIds,
-  projectIrisProfileRoster,
+  nostrIdentityRosterParentIds,
+  projectNostrIdentityRoster,
 } from './profileProjection.ts';
 import {
-  buildIrisProfileRosterOpEventDraft,
-  parseIrisProfileRosterOpEvent,
+  buildNostrIdentityRosterOpEventDraft,
+  parseNostrIdentityRosterOpEvent,
 } from './profileEvents.ts';
-import type { IrisAppKeySecretRewrapResult } from './appKeyAttach.ts';
-import type { Awaitable, IrisIdentityEventSigner } from './signers.ts';
+import type { NostrIdentityAppKeySecretRewrapResult } from './appKeyAttach.ts';
+import type { Awaitable, NostrIdentityEventSigner } from './signers.ts';
 
-export interface IrisAppKeyRemovalContext {
-  profileId: IrisProfileId;
+export interface NostrIdentityAppKeyRemovalContext {
+  profileId: NostrIdentityId;
   appKeyPubkey: string;
   removedByPubkey: string;
-  rosterOp: SignedIrisProfileRosterOp;
-  existingRosterOps: SignedIrisProfileRosterOp[];
-  projectedRoster: IrisProfileRosterProjection;
+  rosterOp: SignedNostrIdentityRosterOp;
+  existingRosterOps: SignedNostrIdentityRosterOp[];
+  projectedRoster: NostrIdentityRosterProjection;
 }
 
-export type IrisAppKeySecretRemovalHook = (
-  context: IrisAppKeyRemovalContext,
-) => Awaitable<IrisAppKeySecretRewrapResult[] | void>;
+export type NostrIdentityAppKeySecretRemovalHook = (
+  context: NostrIdentityAppKeyRemovalContext,
+) => Awaitable<NostrIdentityAppKeySecretRewrapResult[] | void>;
 
-export interface RemoveIrisAppKeyOptions {
-  profileId: IrisProfileId;
-  signer: IrisIdentityEventSigner;
-  rosterOps: SignedIrisProfileRosterOp[];
+export interface RemoveNostrAppKeyOptions {
+  profileId: NostrIdentityId;
+  signer: NostrIdentityEventSigner;
+  rosterOps: SignedNostrIdentityRosterOp[];
   appKeyPubkey: string;
   createdAt?: number;
   clientNonce?: string;
   reason?: string;
   requireSignerAuthorization?: boolean;
-  rewrapSecrets?: IrisAppKeySecretRemovalHook;
+  rewrapSecrets?: NostrIdentityAppKeySecretRemovalHook;
 }
 
-export interface RemoveIrisAppKeyResult {
-  profileId: IrisProfileId;
+export interface RemoveNostrAppKeyResult {
+  profileId: NostrIdentityId;
   appKeyPubkey: string;
   removedByPubkey: string;
-  rosterOp: SignedIrisProfileRosterOp;
-  rewrapResults: IrisAppKeySecretRewrapResult[];
-  projectedRoster: IrisProfileRosterProjection;
+  rosterOp: SignedNostrIdentityRosterOp;
+  rewrapResults: NostrIdentityAppKeySecretRewrapResult[];
+  projectedRoster: NostrIdentityRosterProjection;
 }
 
-export async function removeIrisAppKeyFromProfile(
-  options: RemoveIrisAppKeyOptions,
-): Promise<RemoveIrisAppKeyResult> {
+export async function removeNostrAppKeyFromIdentity(
+  options: RemoveNostrAppKeyOptions,
+): Promise<RemoveNostrAppKeyResult> {
   const appKeyPubkey = requireHexPubkey(options.appKeyPubkey, 'AppKey');
   const signerPubkey = await normalizedSignerPubkey(options.signer);
   const existingRosterOps = options.rosterOps.slice();
-  const existingProjection = projectIrisProfileRoster(options.profileId, existingRosterOps);
+  const existingProjection = projectNostrIdentityRoster(options.profileId, existingRosterOps);
 
   if (options.requireSignerAuthorization !== false) {
     requireSignerCanRemoveAppKey(existingProjection, signerPubkey, appKeyPubkey);
   }
 
-  const draft = buildIrisProfileRosterOpEventDraft({
+  const draft = buildNostrIdentityRosterOpEventDraft({
     signerPubkey,
     profileId: options.profileId,
-    parents: irisProfileRosterParentIds(existingRosterOps),
+    parents: nostrIdentityRosterParentIds(existingRosterOps),
     createdAt: options.createdAt,
     clientNonce: options.clientNonce,
     op: {
@@ -75,8 +75,8 @@ export async function removeIrisAppKeyFromProfile(
     },
   });
   const signedEvent = await options.signer.signEvent(draft);
-  const rosterOp = parseIrisProfileRosterOpEvent(signedEvent as Event);
-  const projectedRoster = projectIrisProfileRoster(options.profileId, [
+  const rosterOp = parseNostrIdentityRosterOpEvent(signedEvent as Event);
+  const projectedRoster = projectNostrIdentityRoster(options.profileId, [
     ...existingRosterOps,
     rosterOp,
   ]);
@@ -100,7 +100,7 @@ export async function removeIrisAppKeyFromProfile(
 }
 
 export function signerCanRemoveAppKey(
-  projection: IrisProfileRosterProjection,
+  projection: NostrIdentityRosterProjection,
   signerPubkey: string,
   appKeyPubkey: string,
 ): boolean {
@@ -128,7 +128,7 @@ export function signerCanRemoveAppKey(
 }
 
 function requireSignerCanRemoveAppKey(
-  projection: IrisProfileRosterProjection,
+  projection: NostrIdentityRosterProjection,
   signerPubkey: string,
   appKeyPubkey: string,
 ): void {
@@ -137,7 +137,7 @@ function requireSignerCanRemoveAppKey(
   }
 }
 
-async function normalizedSignerPubkey(signer: IrisIdentityEventSigner): Promise<string> {
+async function normalizedSignerPubkey(signer: NostrIdentityEventSigner): Promise<string> {
   return requireHexPubkey(await signer.getPublicKey(), 'identity signer');
 }
 
@@ -148,9 +148,9 @@ function requireHexPubkey(value: string, label: string): string {
 }
 
 async function runRemovalHook(
-  hook: IrisAppKeySecretRemovalHook | undefined,
-  context: IrisAppKeyRemovalContext,
-): Promise<IrisAppKeySecretRewrapResult[]> {
+  hook: NostrIdentityAppKeySecretRemovalHook | undefined,
+  context: NostrIdentityAppKeyRemovalContext,
+): Promise<NostrIdentityAppKeySecretRewrapResult[]> {
   if (!hook) return [];
   return (await hook(context)) ?? [];
 }

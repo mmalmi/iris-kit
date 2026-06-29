@@ -54,14 +54,14 @@ test('user settings panel exposes expected user management actions', () => {
 
 test('user settings helpers format key labels and capabilities', () => {
   assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: ' Laptop ' }), 'Laptop');
-  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: 'This device' }), 'Linked browser');
-  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), online: true }), 'Connected browser');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: 'This device' }), 'Linked device');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), online: true }), 'Linked device');
   assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), current: true }), 'This device');
-  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: 'Laptop', current: true }), 'This device');
-  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64) }), 'Linked browser');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64), label: 'Laptop', current: true }), 'Laptop');
+  assert.equal(userSettingsKeyLabel({ pubkey: 'a'.repeat(64) }), 'Linked device');
   assert.deepEqual(userSettingsCapabilityLabels({
     can_admin_profile: true,
     can_write_roots: true,
-    can_decrypt_key_epochs: true,
+    can_decrypt_secret_epochs: true,
   }), ['Admin', 'Write', 'Decrypt']);
 });

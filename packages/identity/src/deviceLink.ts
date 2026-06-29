@@ -8,13 +8,13 @@ import {
   APP_KEY_WRITER_CAPABILITIES,
   createAddAppKeyRosterOp,
   normalizeHexPubkey,
-  type IrisProfileCapabilities,
-  type IrisProfileId,
-  type IrisProfileRosterOpContent,
-  type SignedIrisProfileRosterOp,
+  type NostrIdentityCapabilities,
+  type NostrIdentityId,
+  type NostrIdentityRosterOpContent,
+  type SignedNostrIdentityRosterOp,
 } from './profile.ts';
 import { requireValidSignature } from './profileJson.ts';
-import { irisProfileRosterParentIds } from './profileProjection.ts';
+import { nostrIdentityRosterParentIds } from './profileProjection.ts';
 
 export const DEVICE_LINK_INVITE_PREFIX = 'https://drive.iris.to/invite/';
 export const DEVICE_LINK_INVITE_WEB_PREFIX = DEVICE_LINK_INVITE_PREFIX;
@@ -22,7 +22,7 @@ export const DEVICE_LINK_INVITE_VERSION = 1;
 export const KIND_DEVICE_LINK_REQUEST = FACT_OP_KIND;
 
 export interface DeviceLinkInvite {
-  profileId: IrisProfileId;
+  profileId: NostrIdentityId;
   adminAppKeyPubkey: string;
   invitePubkey: string;
 }
@@ -32,7 +32,7 @@ export interface AdminDeviceLinkInvite extends DeviceLinkInvite {
 }
 
 export interface DeviceLinkRequest {
-  profileId: IrisProfileId;
+  profileId: NostrIdentityId;
   adminAppKeyPubkey: string;
   invitePubkey: string;
   deviceAppKeyPubkey: string;
@@ -48,7 +48,7 @@ export interface SignedDeviceLinkRequest {
 }
 
 export interface DeviceLinkRequestScope {
-  profileId: IrisProfileId;
+  profileId: NostrIdentityId;
   adminAppKeyPubkey: string;
   inviteSecretKey: Uint8Array;
   invitePubkey?: string;
@@ -62,7 +62,7 @@ interface DeviceLinkInvitePayload {
 }
 
 export function createDeviceLinkInvite(options: {
-  profileId: IrisProfileId;
+  profileId: NostrIdentityId;
   adminAppKeyPubkey: string;
   inviteSecretKey?: Uint8Array;
 }): AdminDeviceLinkInvite {
@@ -182,12 +182,12 @@ export function parseDeviceLinkRequestEvent(
 
 export function approveDeviceLinkRequest(options: {
   request: DeviceLinkRequest;
-  rosterOps: SignedIrisProfileRosterOp[];
+  rosterOps: SignedNostrIdentityRosterOp[];
   approvedByPubkey: string;
   approvedAt: number;
   clientNonce: string;
-  capabilities?: IrisProfileCapabilities;
-}): IrisProfileRosterOpContent {
+  capabilities?: NostrIdentityCapabilities;
+}): NostrIdentityRosterOpContent {
   const approvedByPubkey = requirePubkey(options.approvedByPubkey, 'approving AppKey');
   if (approvedByPubkey !== options.request.adminAppKeyPubkey) {
     throw new Error('device link request must be approved by its invited admin AppKey');
@@ -198,8 +198,7 @@ export function approveDeviceLinkRequest(options: {
     devicePubkey: options.request.deviceAppKeyPubkey,
     createdAt: options.approvedAt,
     clientNonce: options.clientNonce,
-    parents: irisProfileRosterParentIds(options.rosterOps),
-    label: options.request.label,
+    parents: nostrIdentityRosterParentIds(options.rosterOps),
     capabilities: options.capabilities ?? APP_KEY_WRITER_CAPABILITIES,
   });
 }

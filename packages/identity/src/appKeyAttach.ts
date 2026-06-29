@@ -3,36 +3,36 @@ import {
   APP_KEY_WRITER_CAPABILITIES,
   appKeyFacet,
   normalizeHexPubkey,
-  type IrisProfileCapabilities,
-  type IrisProfileId,
-  type IrisProfileRosterProjection,
-  type SignedIrisProfileFacetAcceptance,
-  type SignedIrisProfileRosterOp,
+  type NostrIdentityCapabilities,
+  type NostrIdentityId,
+  type NostrIdentityRosterProjection,
+  type SignedNostrIdentityFacetAcceptance,
+  type SignedNostrIdentityRosterOp,
 } from './profile.ts';
-import type { IrisIdentitySession } from './session.ts';
+import type { NostrIdentitySession } from './session.ts';
 import {
-  irisProfileRosterParentIds,
-  projectIrisProfileRoster,
+  nostrIdentityRosterParentIds,
+  projectNostrIdentityRoster,
 } from './profileProjection.ts';
 import {
-  buildIrisProfileRosterOpEventDraft,
-  parseIrisProfileRosterOpEvent,
-  signIrisProfileFacetAcceptance,
+  buildNostrIdentityRosterOpEventDraft,
+  parseNostrIdentityRosterOpEvent,
+  signNostrIdentityFacetAcceptance,
 } from './profileEvents.ts';
-import type { Awaitable, IrisIdentityEventSigner } from './signers.ts';
+import type { Awaitable, NostrIdentityEventSigner } from './signers.ts';
 
-export interface IrisAppKeySecretRewrapContext {
-  profileId: IrisProfileId;
+export interface NostrIdentityAppKeySecretRewrapContext {
+  profileId: NostrIdentityId;
   appKeyPubkey: string;
   appKeyNpub: string;
   addedByPubkey: string;
-  rosterOp: SignedIrisProfileRosterOp;
-  facetAcceptance: SignedIrisProfileFacetAcceptance;
-  existingRosterOps: SignedIrisProfileRosterOp[];
-  projectedRoster?: IrisProfileRosterProjection;
+  rosterOp: SignedNostrIdentityRosterOp;
+  facetAcceptance: SignedNostrIdentityFacetAcceptance;
+  existingRosterOps: SignedNostrIdentityRosterOp[];
+  projectedRoster?: NostrIdentityRosterProjection;
 }
 
-export interface IrisAppKeySecretRewrapResult {
+export interface NostrIdentityAppKeySecretRewrapResult {
   secretId: string;
   status: 'rewrapped' | 'rotated' | 'skipped' | 'needs_user_action';
   epoch?: number;
@@ -40,49 +40,50 @@ export interface IrisAppKeySecretRewrapResult {
   detail?: string;
 }
 
-export type IrisAppKeySecretRewrapHook = (
-  context: IrisAppKeySecretRewrapContext,
-) => Awaitable<IrisAppKeySecretRewrapResult[] | void>;
+export type NostrIdentityAppKeySecretRewrapHook = (
+  context: NostrIdentityAppKeySecretRewrapContext,
+) => Awaitable<NostrIdentityAppKeySecretRewrapResult[] | void>;
 
-export interface AttachIrisAppKeyOptions {
-  profileId: IrisProfileId;
-  signer: IrisIdentityEventSigner;
-  rosterOps?: SignedIrisProfileRosterOp[];
+export interface AttachNostrAppKeyOptions {
+  profileId: NostrIdentityId;
+  signer: NostrIdentityEventSigner;
+  rosterOps?: SignedNostrIdentityRosterOp[];
   appKeySecretKey?: Uint8Array;
   createdAt?: number;
   clientNonce?: string;
   label?: string;
-  capabilities?: IrisProfileCapabilities;
+  encryptedDeviceLabels?: string;
+  capabilities?: NostrIdentityCapabilities;
   requireSignerAuthorization?: boolean;
-  rewrapSecrets?: IrisAppKeySecretRewrapHook;
+  rewrapSecrets?: NostrIdentityAppKeySecretRewrapHook;
 }
 
-export interface AttachIrisAppKeyResult {
-  profileId: IrisProfileId;
+export interface AttachNostrAppKeyResult {
+  profileId: NostrIdentityId;
   appKeyPubkey: string;
   appKeyNpub: string;
   appKeyNsec: string;
   addedByPubkey: string;
-  rosterOp: SignedIrisProfileRosterOp;
-  facetAcceptance: SignedIrisProfileFacetAcceptance;
-  rewrapResults: IrisAppKeySecretRewrapResult[];
+  rosterOp: SignedNostrIdentityRosterOp;
+  facetAcceptance: SignedNostrIdentityFacetAcceptance;
+  rewrapResults: NostrIdentityAppKeySecretRewrapResult[];
 }
 
-export interface CreateAttachedIrisIdentitySessionResult {
-  session: IrisIdentitySession;
-  attachment: AttachIrisAppKeyResult;
+export interface CreateAttachedNostrIdentitySessionResult {
+  session: NostrIdentitySession;
+  attachment: AttachNostrAppKeyResult;
 }
 
-export async function attachIrisAppKeyToProfile(
-  options: AttachIrisAppKeyOptions,
-): Promise<AttachIrisAppKeyResult> {
+export async function attachNostrAppKeyToIdentity(
+  options: AttachNostrAppKeyOptions,
+): Promise<AttachNostrAppKeyResult> {
   const appKeySecretKey = options.appKeySecretKey ?? generateSecretKey();
   const appKeyPubkey = getPublicKey(appKeySecretKey);
   const appKeyNpub = nip19.npubEncode(appKeyPubkey);
   const signerPubkey = await normalizedSignerPubkey(options.signer);
   const existingRosterOps = options.rosterOps?.slice() ?? [];
   const projectedRoster = existingRosterOps.length
-    ? projectIrisProfileRoster(options.profileId, existingRosterOps)
+    ? projectNostrIdentityRoster(options.profileId, existingRosterOps)
     : undefined;
 
   if (options.requireSignerAuthorization !== false && projectedRoster) {
@@ -90,25 +91,25 @@ export async function attachIrisAppKeyToProfile(
   }
 
   const createdAt = options.createdAt ?? currentUnixSeconds();
-  const parents = irisProfileRosterParentIds(existingRosterOps);
-  const draft = buildIrisProfileRosterOpEventDraft({
+  const parents = nostrIdentityRosterParentIds(existingRosterOps);
+  const draft = buildNostrIdentityRosterOpEventDraft({
     signerPubkey,
     profileId: options.profileId,
     parents,
     createdAt,
     clientNonce: options.clientNonce,
+    encryptedDeviceLabels: options.encryptedDeviceLabels,
     op: {
       op: 'add_facet',
       facet: appKeyFacet(appKeyPubkey, {
         addedAt: createdAt,
-        label: options.label,
         capabilities: options.capabilities ?? APP_KEY_WRITER_CAPABILITIES,
       }),
     },
   });
   const signedEvent = await options.signer.signEvent(draft);
-  const rosterOp = parseIrisProfileRosterOpEvent(signedEvent as Event);
-  const facetAcceptance = signIrisProfileFacetAcceptance({
+  const rosterOp = parseNostrIdentityRosterOpEvent(signedEvent as Event);
+  const facetAcceptance = signNostrIdentityFacetAcceptance({
     signerSecretKey: appKeySecretKey,
     profileId: options.profileId,
     purposes: ['app_key'],
@@ -139,10 +140,10 @@ export async function attachIrisAppKeyToProfile(
   };
 }
 
-export async function createAttachedIrisIdentitySession(
-  options: AttachIrisAppKeyOptions,
-): Promise<CreateAttachedIrisIdentitySessionResult> {
-  const attachment = await attachIrisAppKeyToProfile(options);
+export async function createAttachedNostrIdentitySession(
+  options: AttachNostrAppKeyOptions,
+): Promise<CreateAttachedNostrIdentitySessionResult> {
+  const attachment = await attachNostrAppKeyToIdentity(options);
   return {
     attachment,
     session: {
@@ -159,7 +160,7 @@ export async function createAttachedIrisIdentitySession(
 }
 
 export function signerCanAttachAppKey(
-  projection: IrisProfileRosterProjection,
+  projection: NostrIdentityRosterProjection,
   signerPubkey: string,
 ): boolean {
   const normalized = normalizeHexPubkey(signerPubkey);
@@ -168,12 +169,12 @@ export function signerCanAttachAppKey(
   return Boolean(capabilities?.can_admin_profile || capabilities?.can_recover_app_keys);
 }
 
-export function noopIrisAppKeySecretRewrap(): IrisAppKeySecretRewrapResult[] {
+export function noopNostrIdentityAppKeySecretRewrap(): NostrIdentityAppKeySecretRewrapResult[] {
   return [];
 }
 
 function requireSignerCanAttachAppKey(
-  projection: IrisProfileRosterProjection,
+  projection: NostrIdentityRosterProjection,
   signerPubkey: string,
 ): void {
   if (!signerCanAttachAppKey(projection, signerPubkey)) {
@@ -181,16 +182,16 @@ function requireSignerCanAttachAppKey(
   }
 }
 
-async function normalizedSignerPubkey(signer: IrisIdentityEventSigner): Promise<string> {
+async function normalizedSignerPubkey(signer: NostrIdentityEventSigner): Promise<string> {
   const pubkey = normalizeHexPubkey(await signer.getPublicKey());
   if (!pubkey) throw new Error('identity signer pubkey must be 64-char hex');
   return pubkey;
 }
 
 async function runRewrapHook(
-  hook: IrisAppKeySecretRewrapHook | undefined,
-  context: IrisAppKeySecretRewrapContext,
-): Promise<IrisAppKeySecretRewrapResult[]> {
+  hook: NostrIdentityAppKeySecretRewrapHook | undefined,
+  context: NostrIdentityAppKeySecretRewrapContext,
+): Promise<NostrIdentityAppKeySecretRewrapResult[]> {
   if (!hook) return [];
   return (await hook(context)) ?? [];
 }

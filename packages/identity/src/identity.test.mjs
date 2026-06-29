@@ -3,33 +3,38 @@ import { test } from 'node:test';
 import { finalizeEvent, generateSecretKey, getPublicKey, nip19, nip44 } from 'nostr-tools';
 import { generateSeedWords } from 'nostr-tools/nip06';
 import {
-  attachIrisAppKeyToProfile,
+  attachNostrAppKeyToIdentity,
   approveDeviceLinkRequest,
-  createAttachedIrisIdentitySession,
+  createAttachedNostrIdentitySession,
   createDeviceLinkInvite,
   createDeviceLinkRequest,
-  createIrisIdentitySignerFromNip07,
-  createIrisIdentitySignerFromNip46,
-  createIrisIdentitySignerFromNsec,
-  createIrisIdentitySignerFromSeedPhrase,
-  createLocalIrisIdentitySession,
+  createNostrIdentitySignerFromNip07,
+  createNostrIdentitySignerFromNip46,
+  createNostrIdentitySignerFromNsec,
+  createNostrIdentitySignerFromSeedPhrase,
+  createLocalNostrIdentitySession,
   createPendingDeviceLinkSession,
   encodeDeviceLinkInvite,
   isCompleteDeviceLinkInviteInput,
-  KIND_IRIS_PROFILE_FACET_ACCEPTANCE,
-  KIND_IRIS_PROFILE_ROSTER_OP,
+  KIND_NOSTR_IDENTITY_FACET_ACCEPTANCE,
+  KIND_NOSTR_IDENTITY_ROSTER_OP,
   parseDeviceLinkRequestEvent,
   parseDeviceLinkInvite,
-  projectIrisProfileRoster,
+  clearNostrIdentitySession,
+  loadNostrIdentitySession,
+  nostrIdentitySessionRosterEvents,
+  projectNostrIdentityRoster,
+  publishNostrIdentitySessionRosterEvents,
   representativeProfileAuthors,
-  removeIrisAppKeyFromProfile,
+  removeNostrAppKeyFromIdentity,
   selectLatestRepresentativeProfileEvent,
-  signIrisProfileFacetAcceptance,
-  signIrisProfileRosterOp,
+  saveNostrIdentitySession,
+  signNostrIdentityFacetAcceptance,
+  signNostrIdentityRosterOp,
   signerCanAttachAppKey,
   signerCanRemoveAppKey,
-  restoreIrisIdentitySession,
-  serializeIrisIdentitySession,
+  restoreNostrIdentitySession,
+  serializeNostrIdentitySession,
   signDeviceLinkRequestEvent,
 } from './index.ts';
 
@@ -86,7 +91,7 @@ test('admin approval projects the requested device as an AppKey facet', () => {
   const adminSecret = generateSecretKey();
   const admin = getPublicKey(adminSecret);
   const device = getPublicKey(generateSecretKey());
-  const bootstrap = signIrisProfileRosterOp({
+  const bootstrap = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     createdAt: 10,
@@ -99,8 +104,8 @@ test('admin approval projects the requested device as an AppKey facet', () => {
         capabilities: {
           can_write_roots: true,
           can_admin_profile: true,
-          can_receive_key_wraps: true,
-          can_decrypt_key_epochs: true,
+          can_receive_secret_wraps: true,
+          can_decrypt_secret_epochs: true,
         },
         added_at: 10,
         label: 'Laptop',
@@ -126,7 +131,7 @@ test('admin approval projects the requested device as an AppKey facet', () => {
     approvedAt: 12,
     clientNonce: 'approve-phone',
   });
-  const approval = signIrisProfileRosterOp({
+  const approval = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     parents: approvalContent.parents,
@@ -135,11 +140,11 @@ test('admin approval projects the requested device as an AppKey facet', () => {
     op: approvalContent.op,
   });
 
-  const projection = projectIrisProfileRoster(profileId, [approval, bootstrap]);
+  const projection = projectNostrIdentityRoster(profileId, [approval, bootstrap]);
 
   assert.deepEqual(projection.accepted_op_ids, [bootstrap.op_id, approval.op_id]);
   assert.equal(projection.active_facets[admin].capabilities?.can_admin_profile, true);
-  assert.equal(projection.active_facets[device].label, 'Phone');
+  assert.equal(projection.active_facets[device].label, undefined);
   assert.equal(projection.active_facets[device].capabilities?.can_write_roots, true);
 });
 
@@ -167,7 +172,7 @@ test('device link requests are signed identity fact events without raw invite se
     clientNonce: 'link-request',
   });
 
-  assert.equal(event.kind, KIND_IRIS_PROFILE_ROSTER_OP);
+  assert.equal(event.kind, KIND_NOSTR_IDENTITY_ROSTER_OP);
   assert.notEqual(event.content, '');
   assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'nostr_identity_link_request'));
   assert.ok(event.tags.some((tag) => tag[0] === 'p' && tag[1] === invitePubkey));
@@ -198,7 +203,7 @@ test('device link requests are signed identity fact events without raw invite se
 test('roster ops are signed fact events', () => {
   const adminSecret = generateSecretKey();
   const admin = getPublicKey(adminSecret);
-  const signed = signIrisProfileRosterOp({
+  const signed = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     createdAt: 10,
@@ -216,7 +221,7 @@ test('roster ops are signed fact events', () => {
   });
   const event = JSON.parse(signed.event_json);
 
-  assert.equal(event.kind, KIND_IRIS_PROFILE_ROSTER_OP);
+  assert.equal(event.kind, KIND_NOSTR_IDENTITY_ROSTER_OP);
   assert.equal(event.content, '');
   assert.deepEqual(event.tags.find((tag) => tag[0] === 'i' && tag[2] === 'subject'), ['i', profileId, 'subject']);
   assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'nostr_identity_roster_op'));
@@ -224,14 +229,16 @@ test('roster ops are signed fact events', () => {
   assert.ok(event.tags.some((tag) => tag[0] === 'key_pubkey' && tag[1] === admin));
   assert.ok(event.tags.some((tag) => tag[0] === 'p' && tag[1] === admin));
   assert.ok(event.tags.some((tag) => tag[0] === 'key_capability' && tag[1] === 'admin'));
+  assert.equal(event.tags.some((tag) => tag[0] === 'key_label'), false);
+  assert.equal(JSON.stringify(event.tags).includes('Laptop'), false);
   assert.equal(signed.content.op.op, 'add_facet');
-  assert.equal(signed.content.op.facet.label, 'Laptop');
+  assert.equal(signed.content.op.facet.label, undefined);
 });
 
 test('facet acceptances are signed fact events', () => {
   const facetSecret = generateSecretKey();
   const facet = getPublicKey(facetSecret);
-  const acceptance = signIrisProfileFacetAcceptance({
+  const acceptance = signNostrIdentityFacetAcceptance({
     signerSecretKey: facetSecret,
     profileId,
     purposes: ['app_key'],
@@ -241,7 +248,7 @@ test('facet acceptances are signed fact events', () => {
   });
   const event = JSON.parse(acceptance.event_json);
 
-  assert.equal(event.kind, KIND_IRIS_PROFILE_FACET_ACCEPTANCE);
+  assert.equal(event.kind, KIND_NOSTR_IDENTITY_FACET_ACCEPTANCE);
   assert.equal(event.content, '');
   assert.deepEqual(event.tags.find((tag) => tag[0] === 'i' && tag[2] === 'subject'), ['i', profileId, 'subject']);
   assert.ok(event.tags.some((tag) => tag[0] === 'type' && tag[1] === 'nostr_identity_key_acceptance'));
@@ -264,26 +271,26 @@ test('fact roster ops round trip all roster mutation shapes', () => {
       op: {
         op: 'set_capabilities',
         pubkey: device,
-        capabilities: { can_write_roots: true, can_receive_key_wraps: true },
+        capabilities: { can_write_roots: true, can_receive_secret_wraps: true },
       },
       expected: {
         op: 'set_capabilities',
         pubkey: device,
-        capabilities: { can_write_roots: true, can_receive_key_wraps: true },
+        capabilities: { can_write_roots: true, can_receive_secret_wraps: true },
       },
     },
     {
-      op: { op: 'rotate_key_epoch', epoch: 2, wrapped_dck: { [device]: 'wrap-device' } },
-      expected: { op: 'rotate_key_epoch', epoch: 2, wrapped_dck: { [device]: 'wrap-device' } },
+      op: { op: 'rotate_secret_epoch', epoch: 2, wrapped_secrets: { [device]: 'wrap-device' } },
+      expected: { op: 'rotate_secret_epoch', epoch: 2, wrapped_secrets: { [device]: 'wrap-device' } },
     },
     {
-      op: { op: 'repair_key_wraps', epoch: 2, wrapped_dck: { [device]: 'wrap-device-again' } },
-      expected: { op: 'repair_key_wraps', epoch: 2, wrapped_dck: { [device]: 'wrap-device-again' } },
+      op: { op: 'repair_secret_wraps', epoch: 2, wrapped_secrets: { [device]: 'wrap-device-again' } },
+      expected: { op: 'repair_secret_wraps', epoch: 2, wrapped_secrets: { [device]: 'wrap-device-again' } },
     },
   ];
 
   for (const [index, { op, expected }] of cases.entries()) {
-    const signed = signIrisProfileRosterOp({
+    const signed = signNostrIdentityRosterOp({
       signerSecretKey: adminSecret,
       profileId,
       parents: [parent],
@@ -303,7 +310,7 @@ test('signed non-admin roster additions are rejected by the neutral identity gra
   const deviceSecret = generateSecretKey();
   const device = getPublicKey(deviceSecret);
   const other = getPublicKey(generateSecretKey());
-  const bootstrap = signIrisProfileRosterOp({
+  const bootstrap = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     createdAt: 10,
@@ -318,7 +325,7 @@ test('signed non-admin roster additions are rejected by the neutral identity gra
       },
     },
   });
-  const addDevice = signIrisProfileRosterOp({
+  const addDevice = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     parents: [bootstrap.op_id],
@@ -334,7 +341,7 @@ test('signed non-admin roster additions are rejected by the neutral identity gra
       },
     },
   });
-  const rogue = signIrisProfileRosterOp({
+  const rogue = signNostrIdentityRosterOp({
     signerSecretKey: deviceSecret,
     profileId,
     parents: [bootstrap.op_id, addDevice.op_id],
@@ -351,7 +358,7 @@ test('signed non-admin roster additions are rejected by the neutral identity gra
     },
   });
 
-  const projection = projectIrisProfileRoster(profileId, [bootstrap, addDevice, rogue]);
+  const projection = projectNostrIdentityRoster(profileId, [bootstrap, addDevice, rogue]);
 
   assert.deepEqual(projection.accepted_op_ids, [bootstrap.op_id, addDevice.op_id]);
   assert.deepEqual(projection.rejected_op_ids, [rogue.op_id]);
@@ -363,7 +370,7 @@ test('representative profile uses latest kind 0 event from active identity autho
   const admin = getPublicKey(adminSecret);
   const social = getPublicKey(generateSecretKey());
   const recovery = getPublicKey(generateSecretKey());
-  const bootstrap = signIrisProfileRosterOp({
+  const bootstrap = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     createdAt: 10,
@@ -378,7 +385,7 @@ test('representative profile uses latest kind 0 event from active identity autho
       },
     },
   });
-  const addSocial = signIrisProfileRosterOp({
+  const addSocial = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     parents: [bootstrap.op_id],
@@ -394,7 +401,7 @@ test('representative profile uses latest kind 0 event from active identity autho
       },
     },
   }, 'op-social');
-  const addRecovery = signIrisProfileRosterOp({
+  const addRecovery = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     parents: [bootstrap.op_id],
@@ -410,7 +417,7 @@ test('representative profile uses latest kind 0 event from active identity autho
       },
     },
   }, 'op-recovery');
-  const projection = projectIrisProfileRoster(profileId, [bootstrap, addSocial, addRecovery]);
+  const projection = projectNostrIdentityRoster(profileId, [bootstrap, addSocial, addRecovery]);
 
   assert.deepEqual(representativeProfileAuthors(projection), [admin, recovery, social].sort());
   const selected = selectLatestRepresentativeProfileEvent(projection, [
@@ -426,20 +433,21 @@ test('representative profile uses latest kind 0 event from active identity autho
 
 test('local identity session creates a UUID profile with an active AppKey', () => {
   const appKeySecretKey = generateSecretKey();
-  const session = createLocalIrisIdentitySession({
+  const session = createLocalNostrIdentitySession({
     profileId,
     appKeySecretKey,
     createdAt: 42,
     clientNonce: 'session-bootstrap',
     label: 'Browser',
   });
-  const restored = restoreIrisIdentitySession(serializeIrisIdentitySession(session));
-  const projection = projectIrisProfileRoster(restored.profileId, restored.rosterOps);
+  const restored = restoreNostrIdentitySession(serializeNostrIdentitySession(session));
+  const projection = projectNostrIdentityRoster(restored.profileId, restored.rosterOps);
 
   assert.equal(restored.profileId, profileId);
   assert.equal(restored.appKeyPubkey, getPublicKey(appKeySecretKey));
   assert.equal(restored.status, 'active');
-  assert.equal(projection.active_facets[restored.appKeyPubkey].label, 'Browser');
+  assert.equal(restored.label, 'Browser');
+  assert.equal(projection.active_facets[restored.appKeyPubkey].label, undefined);
 });
 
 test('nsec login attaches a new AppKey and runs the secret rewrap hook', async () => {
@@ -448,7 +456,7 @@ test('nsec login attaches a new AppKey and runs the secret rewrap hook', async (
   const recoverySecret = generateSecretKey();
   const recovery = getPublicKey(recoverySecret);
   const appKeySecretKey = generateSecretKey();
-  const bootstrap = signIrisProfileRosterOp({
+  const bootstrap = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     createdAt: 10,
@@ -461,15 +469,15 @@ test('nsec login attaches a new AppKey and runs the secret rewrap hook', async (
         capabilities: {
           can_write_roots: true,
           can_admin_profile: true,
-          can_receive_key_wraps: true,
-          can_decrypt_key_epochs: true,
+          can_receive_secret_wraps: true,
+          can_decrypt_secret_epochs: true,
         },
         added_at: 10,
         label: 'Existing browser',
       },
     },
   });
-  const addRecovery = signIrisProfileRosterOp({
+  const addRecovery = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     parents: [bootstrap.op_id],
@@ -482,16 +490,16 @@ test('nsec login attaches a new AppKey and runs the secret rewrap hook', async (
         purposes: ['recovery_phrase'],
         capabilities: {
           can_recover_app_keys: true,
-          can_decrypt_key_epochs: true,
+          can_decrypt_secret_epochs: true,
         },
         added_at: 11,
         label: 'Recovery nsec',
       },
     },
   });
-  const signer = createIrisIdentitySignerFromNsec(nip19.nsecEncode(recoverySecret));
+  const signer = createNostrIdentitySignerFromNsec(nip19.nsecEncode(recoverySecret));
   const rewrapCalls = [];
-  const { attachment, session } = await createAttachedIrisIdentitySession({
+  const { attachment, session } = await createAttachedNostrIdentitySession({
     profileId,
     signer,
     rosterOps: [bootstrap, addRecovery],
@@ -509,13 +517,13 @@ test('nsec login attaches a new AppKey and runs the secret rewrap hook', async (
       }];
     },
   });
-  const projection = projectIrisProfileRoster(profileId, session.rosterOps);
+  const projection = projectNostrIdentityRoster(profileId, session.rosterOps);
 
   assert.equal(attachment.addedByPubkey, recovery);
   assert.equal(attachment.appKeyPubkey, getPublicKey(appKeySecretKey));
   assert.equal(attachment.appKeyNsec, nip19.nsecEncode(appKeySecretKey));
   assert.equal(attachment.rosterOp.signer_pubkey, recovery);
-  assert.equal(attachment.rosterOp.content.op.facet.label, 'Browser AppKey');
+  assert.equal(attachment.rosterOp.content.op.facet.label, undefined);
   assert.equal(attachment.facetAcceptance.signer_pubkey, attachment.appKeyPubkey);
   assert.equal(attachment.facetAcceptance.content.roster_op_id, attachment.rosterOp.op_id);
   assert.equal(projection.active_facets[attachment.appKeyPubkey].capabilities?.can_write_roots, true);
@@ -536,11 +544,11 @@ test('nsec login attaches a new AppKey and runs the secret rewrap hook', async (
 test('seed phrase recovery login can attach a new AppKey', async () => {
   const adminSecret = generateSecretKey();
   const admin = getPublicKey(adminSecret);
-  const seedSigner = createIrisIdentitySignerFromSeedPhrase({
+  const seedSigner = createNostrIdentitySignerFromSeedPhrase({
     seedWords: generateSeedWords(),
   });
   const recoveryPubkey = await seedSigner.getPublicKey();
-  const bootstrap = signIrisProfileRosterOp({
+  const bootstrap = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     createdAt: 10,
@@ -555,7 +563,7 @@ test('seed phrase recovery login can attach a new AppKey', async () => {
       },
     },
   });
-  const addRecovery = signIrisProfileRosterOp({
+  const addRecovery = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     parents: [bootstrap.op_id],
@@ -572,7 +580,7 @@ test('seed phrase recovery login can attach a new AppKey', async () => {
       },
     },
   });
-  const attachment = await attachIrisAppKeyToProfile({
+  const attachment = await attachNostrAppKeyToIdentity({
     profileId,
     signer: seedSigner,
     rosterOps: [bootstrap, addRecovery],
@@ -580,7 +588,7 @@ test('seed phrase recovery login can attach a new AppKey', async () => {
     createdAt: 60,
     clientNonce: 'seed-attach',
   });
-  const projection = projectIrisProfileRoster(profileId, [bootstrap, addRecovery, attachment.rosterOp]);
+  const projection = projectNostrIdentityRoster(profileId, [bootstrap, addRecovery, attachment.rosterOp]);
 
   assert.equal(attachment.addedByPubkey, recoveryPubkey);
   assert.equal(attachment.rosterOp.signer_pubkey, recoveryPubkey);
@@ -593,7 +601,7 @@ test('NIP-07 and NIP-46 recovery signers can attach an AppKey through the same f
   const admin = getPublicKey(adminSecret);
   const recoverySecret = generateSecretKey();
   const recovery = getPublicKey(recoverySecret);
-  const bootstrap = signIrisProfileRosterOp({
+  const bootstrap = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     createdAt: 10,
@@ -608,7 +616,7 @@ test('NIP-07 and NIP-46 recovery signers can attach an AppKey through the same f
       },
     },
   });
-  const addRecovery = signIrisProfileRosterOp({
+  const addRecovery = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     parents: [bootstrap.op_id],
@@ -621,7 +629,7 @@ test('NIP-07 and NIP-46 recovery signers can attach an AppKey through the same f
         purposes: ['nip46_signer'],
         capabilities: {
           can_recover_app_keys: true,
-          can_decrypt_key_epochs: true,
+          can_decrypt_secret_epochs: true,
         },
         added_at: 11,
       },
@@ -634,17 +642,17 @@ test('NIP-07 and NIP-46 recovery signers can attach an AppKey through the same f
       tags: draft.tags.map((tag) => tag.slice()),
     }, recoverySecret),
   };
-  const nip07Attachment = await attachIrisAppKeyToProfile({
+  const nip07Attachment = await attachNostrAppKeyToIdentity({
     profileId,
-    signer: createIrisIdentitySignerFromNip07(remoteSigner),
+    signer: createNostrIdentitySignerFromNip07(remoteSigner),
     rosterOps: [bootstrap, addRecovery],
     appKeySecretKey: generateSecretKey(),
     createdAt: 70,
     clientNonce: 'nip07-attach',
   });
-  const nip46Attachment = await attachIrisAppKeyToProfile({
+  const nip46Attachment = await attachNostrAppKeyToIdentity({
     profileId,
-    signer: createIrisIdentitySignerFromNip46(remoteSigner),
+    signer: createNostrIdentitySignerFromNip46(remoteSigner),
     rosterOps: [bootstrap, addRecovery],
     appKeySecretKey: generateSecretKey(),
     createdAt: 71,
@@ -664,7 +672,7 @@ test('recovery signers can remove AppKeys and run the secret rewrap hook', async
   const recovery = getPublicKey(recoverySecret);
   const appKeySecret = generateSecretKey();
   const appKey = getPublicKey(appKeySecret);
-  const bootstrap = signIrisProfileRosterOp({
+  const bootstrap = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     createdAt: 10,
@@ -677,14 +685,14 @@ test('recovery signers can remove AppKeys and run the secret rewrap hook', async
         capabilities: {
           can_write_roots: true,
           can_admin_profile: true,
-          can_receive_key_wraps: true,
-          can_decrypt_key_epochs: true,
+          can_receive_secret_wraps: true,
+          can_decrypt_secret_epochs: true,
         },
         added_at: 10,
       },
     },
   });
-  const addRecovery = signIrisProfileRosterOp({
+  const addRecovery = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     parents: [bootstrap.op_id],
@@ -697,14 +705,14 @@ test('recovery signers can remove AppKeys and run the secret rewrap hook', async
         purposes: ['recovery_phrase'],
         capabilities: {
           can_recover_app_keys: true,
-          can_receive_key_wraps: true,
-          can_decrypt_key_epochs: true,
+          can_receive_secret_wraps: true,
+          can_decrypt_secret_epochs: true,
         },
         added_at: 11,
       },
     },
   });
-  const addAppKey = signIrisProfileRosterOp({
+  const addAppKey = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     parents: [bootstrap.op_id, addRecovery.op_id],
@@ -717,8 +725,8 @@ test('recovery signers can remove AppKeys and run the secret rewrap hook', async
         purposes: ['app_key'],
         capabilities: {
           can_write_roots: true,
-          can_receive_key_wraps: true,
-          can_decrypt_key_epochs: true,
+          can_receive_secret_wraps: true,
+          can_decrypt_secret_epochs: true,
         },
         added_at: 12,
         label: 'Phone',
@@ -726,15 +734,15 @@ test('recovery signers can remove AppKeys and run the secret rewrap hook', async
     },
   });
   const rosterOps = [bootstrap, addRecovery, addAppKey];
-  const projection = projectIrisProfileRoster(profileId, rosterOps);
+  const projection = projectNostrIdentityRoster(profileId, rosterOps);
   const hookCalls = [];
 
   assert.equal(signerCanRemoveAppKey(projection, recovery, appKey), true);
   assert.equal(signerCanRemoveAppKey(projection, appKey, admin), false);
 
-  const removal = await removeIrisAppKeyFromProfile({
+  const removal = await removeNostrAppKeyFromIdentity({
     profileId,
-    signer: createIrisIdentitySignerFromNsec(nip19.nsecEncode(recoverySecret)),
+    signer: createNostrIdentitySignerFromNsec(nip19.nsecEncode(recoverySecret)),
     rosterOps,
     appKeyPubkey: appKey,
     createdAt: 13,
@@ -749,7 +757,7 @@ test('recovery signers can remove AppKeys and run the secret rewrap hook', async
       }];
     },
   });
-  const afterRemoval = projectIrisProfileRoster(profileId, [...rosterOps, removal.rosterOp]);
+  const afterRemoval = projectNostrIdentityRoster(profileId, [...rosterOps, removal.rosterOp]);
 
   assert.equal(removal.removedByPubkey, recovery);
   assert.deepEqual(removal.rosterOp.content.op, {
@@ -768,9 +776,9 @@ test('recovery signers can remove AppKeys and run the secret rewrap hook', async
     epoch: 2,
   }]);
   await assert.rejects(
-    removeIrisAppKeyFromProfile({
+    removeNostrAppKeyFromIdentity({
       profileId,
-      signer: createIrisIdentitySignerFromNsec(nip19.nsecEncode(appKeySecret)),
+      signer: createNostrIdentitySignerFromNsec(nip19.nsecEncode(appKeySecret)),
       rosterOps,
       appKeyPubkey: admin,
       createdAt: 14,
@@ -785,7 +793,7 @@ test('recovery signers expose NIP-44 encryption when the underlying method can d
   const senderPubkey = getPublicKey(senderSecret);
   const recipientSecret = generateSecretKey();
   const recipientPubkey = getPublicKey(recipientSecret);
-  const recipient = createIrisIdentitySignerFromNsec(nip19.nsecEncode(recipientSecret));
+  const recipient = createNostrIdentitySignerFromNsec(nip19.nsecEncode(recipientSecret));
   const conversationKey = nip44.v2.utils.getConversationKey(senderSecret, recipientPubkey);
   const ciphertext = nip44.v2.encrypt('drive-content-key', conversationKey);
 
@@ -794,7 +802,7 @@ test('recovery signers expose NIP-44 encryption when the underlying method can d
   assert.equal(nip44.v2.decrypt(rewrapped, conversationKey), 'drive-content-key');
 
   const calls = [];
-  const remote = createIrisIdentitySignerFromNip46({
+  const remote = createNostrIdentitySignerFromNip46({
     getPublicKey: async () => recipientPubkey,
     signEvent: async (draft) => finalizeEvent({
       ...draft,
@@ -821,7 +829,7 @@ test('recovery signers expose NIP-44 encryption when the underlying method can d
 test('AppKey attach rejects signers without admin or recovery capability', async () => {
   const existingSecret = generateSecretKey();
   const existingPubkey = getPublicKey(existingSecret);
-  const bootstrap = signIrisProfileRosterOp({
+  const bootstrap = signNostrIdentityRosterOp({
     signerSecretKey: existingSecret,
     profileId,
     createdAt: 10,
@@ -836,13 +844,13 @@ test('AppKey attach rejects signers without admin or recovery capability', async
       },
     },
   });
-  const projection = projectIrisProfileRoster(profileId, [bootstrap]);
+  const projection = projectNostrIdentityRoster(profileId, [bootstrap]);
 
   assert.equal(signerCanAttachAppKey(projection, existingPubkey), false);
   await assert.rejects(
-    attachIrisAppKeyToProfile({
+    attachNostrAppKeyToIdentity({
       profileId,
-      signer: createIrisIdentitySignerFromNsec(nip19.nsecEncode(existingSecret)),
+      signer: createNostrIdentitySignerFromNsec(nip19.nsecEncode(existingSecret)),
       rosterOps: [bootstrap],
       appKeySecretKey: generateSecretKey(),
       createdAt: 80,
@@ -872,4 +880,40 @@ test('pending device-link session keeps invite identity and request material', (
   assert.equal(session.pendingDeviceLink?.adminAppKeyPubkey, admin);
   assert.equal(session.pendingDeviceLink?.invitePubkey, invitePubkey);
   assert.equal(session.pendingDeviceLink?.deviceAppKeyPubkey, session.appKeyPubkey);
+});
+
+test('browser session helpers persist, restore, publish, and clear NostrIdentity sessions', async () => {
+  const values = new Map();
+  const storage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key),
+  };
+  const session = createLocalNostrIdentitySession({
+    profileId,
+    appKeySecretKey: generateSecretKey(),
+    createdAt: 100,
+    clientNonce: 'stored-session',
+    label: 'This device',
+  });
+
+  saveNostrIdentitySession(session, { storage, key: 'chat-session' });
+  const restored = loadNostrIdentitySession({ storage, key: 'chat-session' });
+
+  assert.equal(restored?.profileId, profileId);
+  assert.equal(restored?.appKeyPubkey, session.appKeyPubkey);
+  assert.equal(restored?.label, 'This device');
+  assert.deepEqual(
+    nostrIdentitySessionRosterEvents(session).map((event) => event.id),
+    session.rosterOps.map((op) => op.op_id),
+  );
+
+  const published = [];
+  await publishNostrIdentitySessionRosterEvents(session, (event) => {
+    published.push(event.id);
+  });
+  assert.deepEqual(published, session.rosterOps.map((op) => op.op_id));
+
+  clearNostrIdentitySession({ storage, key: 'chat-session' });
+  assert.equal(loadNostrIdentitySession({ storage, key: 'chat-session' }), null);
 });

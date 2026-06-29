@@ -43,6 +43,12 @@ test('identity recovery methods cover supported recovery options', () => {
   assert.match(panelSource, /selected = null/);
 });
 
+test('IdentityRecoveryPanel can hide the optional NIP-46 relay input', () => {
+  assert.match(panelSource, /showNip46Relay/);
+  assert.match(panelSource, /\{#if showNip46Relay\}/);
+  assert.match(panelSource, /showNip46Relay && nip46Relay/);
+});
+
 test('identity recovery requests normalize credentials without long-lived signer state', () => {
   assert.deepEqual(normalizeIdentityRecoveryRequest({
     method: 'seed_phrase',

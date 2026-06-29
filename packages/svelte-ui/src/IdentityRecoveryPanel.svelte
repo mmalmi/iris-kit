@@ -17,6 +17,7 @@
     submitLabel?: string;
     error?: string;
     nostrAvailable?: boolean;
+    showNip46Relay?: boolean;
     showCreateNew?: boolean;
     createNewTitle?: string;
     createNewDescription?: string;
@@ -42,6 +43,7 @@
     submitLabel = 'Continue',
     error = '',
     nostrAvailable = true,
+    showNip46Relay = true,
     showCreateNew = false,
     createNewTitle = 'No identity found',
     createNewDescription = '',
@@ -93,7 +95,7 @@
     ...(seedWords ? { seedWords } : {}),
     ...(seedPassphrase ? { seedPassphrase } : {}),
     ...(nip46Connection ? { nip46Connection } : {}),
-    ...(nip46Relay ? { nip46Relay } : {}),
+    ...(showNip46Relay && nip46Relay ? { nip46Relay } : {}),
   } : null);
   const canSubmit = $derived(
     !effectiveDisabled
@@ -173,7 +175,7 @@
     if (submittingImmediate) return;
     submittingImmediate = true;
     try {
-      await onSubmit?.(normalizeIdentityRecoveryRequest(nextRequest));
+      await onSubmit?.(normalizeIdentityRecoveryRequest(panelRecoveryRequest(nextRequest)));
     } finally {
       submittingImmediate = false;
     }
@@ -195,18 +197,27 @@
     seedWords = nextRequest.seedWords ?? '';
     seedPassphrase = nextRequest.seedPassphrase ?? '';
     nip46Connection = nextRequest.nip46Connection ?? '';
-    nip46Relay = nextRequest.nip46Relay ?? '';
+    nip46Relay = showNip46Relay ? nextRequest.nip46Relay ?? '' : '';
   }
 
   function identityRecoveryRequestKey(nextRequest: IdentityRecoveryRequest): string {
+    const panelRequest = panelRecoveryRequest(nextRequest);
     return JSON.stringify({
-      method: nextRequest.method,
-      nsec: nextRequest.nsec ?? '',
-      seedWords: nextRequest.seedWords ?? '',
-      seedPassphrase: nextRequest.seedPassphrase ?? '',
-      nip46Connection: nextRequest.nip46Connection ?? '',
-      nip46Relay: nextRequest.nip46Relay ?? '',
+      method: panelRequest.method,
+      nsec: panelRequest.nsec ?? '',
+      seedWords: panelRequest.seedWords ?? '',
+      seedPassphrase: panelRequest.seedPassphrase ?? '',
+      nip46Connection: panelRequest.nip46Connection ?? '',
+      nip46Relay: panelRequest.nip46Relay ?? '',
     });
+  }
+
+  function panelRecoveryRequest(nextRequest: IdentityRecoveryRequest): IdentityRecoveryRequest {
+    if (showNip46Relay || nextRequest.method !== 'nip46') return nextRequest;
+    return {
+      method: nextRequest.method,
+      ...(nextRequest.nip46Connection ? { nip46Connection: nextRequest.nip46Connection } : {}),
+    };
   }
 </script>
 
@@ -350,17 +361,19 @@
           oninput={(event) => (nip46Connection = (event.currentTarget as HTMLInputElement).value)}
         />
       </label>
-      <label class="field">
-        <span>Relay</span>
-        <input
-          type="url"
-          value={nip46Relay}
-          placeholder="wss://..."
-          autocomplete="off"
-          disabled={effectiveDisabled}
-          oninput={(event) => (nip46Relay = (event.currentTarget as HTMLInputElement).value)}
-        />
-      </label>
+      {#if showNip46Relay}
+        <label class="field">
+          <span>Relay</span>
+          <input
+            type="url"
+            value={nip46Relay}
+            placeholder="wss://..."
+            autocomplete="off"
+            disabled={effectiveDisabled}
+            oninput={(event) => (nip46Relay = (event.currentTarget as HTMLInputElement).value)}
+          />
+        </label>
+      {/if}
     {/if}
 
     {#if selected === 'nip07' && !nostrAvailable}
