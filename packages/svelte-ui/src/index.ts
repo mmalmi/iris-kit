@@ -48,11 +48,23 @@ export {
 export {
   IDENTITY_RECOVERY_METHODS,
   identityRecoveryRequestHasInput,
+  normalizeIdentityCreateRequest,
   normalizeIdentityRecoveryRequest,
+  type IdentityCreateRequest,
   type IdentityRecoveryMethod,
   type IdentityRecoveryMethodOption,
   type IdentityRecoveryRequest,
 } from './identityRecovery';
+export {
+  IDENTITY_BOOTSTRAP_MODES,
+  identityBootstrapAction,
+  shouldAutoCreateIdentity,
+  shouldPromptForIdentity,
+  type IdentityBootstrapAction,
+  type IdentityBootstrapMode,
+  type IdentityBootstrapOptions,
+  type IdentityBootstrapSurface,
+} from './identityBootstrap';
 export {
   userSettingsCapabilityLabels,
   userSettingsKeyLabel,

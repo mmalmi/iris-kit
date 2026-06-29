@@ -70,6 +70,10 @@
       "types": "./src/identityRecovery.ts",
       "default": "./src/identityRecovery.ts"
     },
+    "./identityBootstrap": {
+      "types": "./src/identityBootstrap.ts",
+      "default": "./src/identityBootstrap.ts"
+    },
     "./userSettings": {
       "types": "./src/userSettings.ts",
       "default": "./src/userSettings.ts"

@@ -15,7 +15,10 @@ test('AccountSwitcher is exported as a shared Svelte UI component', () => {
 test('AccountSwitcher keeps account UI generic and label driven', () => {
   assert.match(switcherSource, /interface AccountSwitcherAccount/);
   assert.match(switcherSource, /inputLabel = 'Add account'/);
+  assert.match(switcherSource, /showAddForm = true/);
+  assert.match(switcherSource, /\{#if showAddForm\}/);
   assert.match(switcherSource, /class="account-row"/);
+  assert.match(switcherSource, /data-testid="account-item"/);
   assert.match(switcherSource, /imgProxy=\{false\}/);
   assert.match(switcherSource, /Current/);
   assert.doesNotMatch(switcherSource, /placeholder=/);

@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
   IDENTITY_RECOVERY_METHODS,
   identityRecoveryRequestHasInput,
+  normalizeIdentityCreateRequest,
   normalizeIdentityRecoveryRequest,
 } from './identityRecovery.ts';
 
@@ -38,9 +39,19 @@ test('identity recovery methods cover supported recovery options', () => {
   assert.match(panelSource, /autoSubmitInitial/);
   assert.match(panelSource, /shouldAutoSubmit/);
   assert.match(panelSource, /showCreateNew/);
+  assert.match(panelSource, /showCreateNewName/);
+  assert.match(panelSource, /identity-create-name/);
   assert.match(panelSource, /onCreateNew/);
   assert.match(panelSource, /selected === 'nip07'/);
   assert.match(panelSource, /selected = null/);
+});
+
+test('identity create requests normalize optional profile names', () => {
+  assert.deepEqual(normalizeIdentityCreateRequest({ name: '  Ada Lovelace  ' }), {
+    name: 'Ada Lovelace',
+  });
+  assert.deepEqual(normalizeIdentityCreateRequest({ name: '   ' }), {});
+  assert.deepEqual(normalizeIdentityCreateRequest(), {});
 });
 
 test('IdentityRecoveryPanel can hide the optional NIP-46 relay input', () => {

@@ -62,10 +62,16 @@
   );
 
   let showAddDevice = $state(false);
+  let inviteStarting = $state(false);
   let effectiveKeyBadgeMode = $derived(keyBadgeMode ?? (showKeyBadges ? 'all' : 'none'));
+  let invitePreparing = $derived(inviteBusy || inviteStarting);
 
   $effect(() => {
     if (pendingRequests.length > 0) showAddDevice = true;
+  });
+
+  $effect(() => {
+    if (inviteUrl || !showAddDevice) inviteStarting = false;
   });
 
   function keyBusy(key: UserSettingsKey, action: string): boolean {
@@ -84,11 +90,16 @@
     return userSettingsCapabilityLabels(key.capabilities);
   }
 
-  function toggleAddDevice(): void {
+  async function toggleAddDevice(): Promise<void> {
     const nextShowAddDevice = !showAddDevice;
     showAddDevice = nextShowAddDevice;
-    if (nextShowAddDevice && !inviteUrl && !inviteBusy) {
-      void onCreateInvite?.();
+    if (nextShowAddDevice && !inviteUrl && !invitePreparing) {
+      inviteStarting = true;
+      try {
+        await onCreateInvite?.();
+      } finally {
+        inviteStarting = false;
+      }
     }
   }
 </script>
@@ -161,10 +172,10 @@
                       type="button"
                       class="reset-link-button"
                       onclick={() => onResetInvite?.()}
-                      disabled={inviteBusy}
+                      disabled={invitePreparing}
                       data-testid="user-reset-link"
                     >
-                      {#if inviteBusy}
+                      {#if invitePreparing}
                         <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
                       {:else}
                         <span class="i-lucide-refresh-cw" aria-hidden="true"></span>
@@ -174,7 +185,7 @@
                   {/if}
                 </div>
               </div>
-            {:else if inviteBusy}
+            {:else if invitePreparing}
               <div class="invite-loading" data-testid="user-link-invite-loading">
                 <span class="i-lucide-loader-2 spin" aria-hidden="true"></span>
                 <span>Preparing invite...</span>

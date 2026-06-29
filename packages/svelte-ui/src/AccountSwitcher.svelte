@@ -17,6 +17,7 @@
     inputValue?: string;
     inputLabel?: string;
     addLabel?: string;
+    showAddForm?: boolean;
     error?: string;
     autocomplete?: string;
     onInput?: (value: string) => void;
@@ -31,6 +32,7 @@
     inputValue = '',
     inputLabel = 'Add account',
     addLabel = 'Add',
+    showAddForm = true,
     error = '',
     autocomplete = 'off',
     onInput = undefined,
@@ -55,31 +57,33 @@
 </script>
 
 <div class={`iris-account-switcher ${className}`.trim()}>
-  <form class="account-add-form" onsubmit={handleSubmit}>
-    <label for={inputId}>
-      <span>{inputLabel}</span>
-      <input
-        id={inputId}
-        type="text"
-        value={inputValue}
-        {autocomplete}
-        autocapitalize="none"
-        spellcheck="false"
-        aria-invalid={error ? 'true' : undefined}
-        aria-describedby={error ? errorId : undefined}
-        oninput={handleInput}
-      />
-    </label>
-    <button type="submit">{addLabel}</button>
-  </form>
+  {#if showAddForm}
+    <form class="account-add-form" onsubmit={handleSubmit}>
+      <label for={inputId}>
+        <span>{inputLabel}</span>
+        <input
+          id={inputId}
+          type="text"
+          value={inputValue}
+          {autocomplete}
+          autocapitalize="none"
+          spellcheck="false"
+          aria-invalid={error ? 'true' : undefined}
+          aria-describedby={error ? errorId : undefined}
+          oninput={handleInput}
+        />
+      </label>
+      <button type="submit">{addLabel}</button>
+    </form>
+  {/if}
 
-  {#if error}
+  {#if showAddForm && error}
     <p class="field-error" id={errorId}>{error}</p>
   {/if}
 
   <div class="account-list">
     {#each accounts as account (account.id)}
-      <div class="account-row" class:active={account.current}>
+      <div class="account-row" class:active={account.current} data-testid="account-item">
         <button
           class="account-select-button"
           type="button"

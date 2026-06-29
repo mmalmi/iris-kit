@@ -15,6 +15,10 @@ export interface IdentityRecoveryRequest {
   nip46Relay?: string;
 }
 
+export interface IdentityCreateRequest {
+  name?: string;
+}
+
 export const IDENTITY_RECOVERY_METHODS: readonly IdentityRecoveryMethodOption[] = [
   { id: 'nip07', label: 'Browser extension', icon: 'i-lucide-plug' },
   { id: 'seed_phrase', label: 'Seed phrase', icon: 'i-lucide-list-ordered' },
@@ -56,6 +60,11 @@ export function identityRecoveryRequestHasInput(request: IdentityRecoveryRequest
   } catch {
     return false;
   }
+}
+
+export function normalizeIdentityCreateRequest(request: IdentityCreateRequest = {}): IdentityCreateRequest {
+  const name = request.name?.trim() ?? '';
+  return name ? { name } : {};
 }
 
 function normalizeSeedWords(value: string | undefined): string {

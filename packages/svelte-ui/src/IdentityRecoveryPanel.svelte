@@ -3,6 +3,8 @@
     IDENTITY_RECOVERY_METHODS,
     identityRecoveryRequestHasInput,
     normalizeIdentityRecoveryRequest,
+    normalizeIdentityCreateRequest,
+    type IdentityCreateRequest,
     type IdentityRecoveryMethod,
     type IdentityRecoveryRequest,
   } from './identityRecovery';
@@ -22,13 +24,17 @@
     createNewTitle?: string;
     createNewDescription?: string;
     createNewLabel?: string;
+    showCreateNewName?: boolean;
+    createNewNameLabel?: string;
+    createNewNamePlaceholder?: string;
+    createNewNameRequired?: boolean;
     createNewBusy?: boolean;
     createNewDisabled?: boolean;
     createNewTestId?: string;
     shouldAutoSubmit?: (request: IdentityRecoveryRequest) => boolean;
     onMethodChange?: (method: IdentityRecoveryMethod) => void;
     onSubmit?: (request: IdentityRecoveryRequest) => void | Promise<void>;
-    onCreateNew?: () => void | Promise<void>;
+    onCreateNew?: (request?: IdentityCreateRequest) => void | Promise<void>;
     onCreateNewBack?: () => void;
     class?: string;
   }
@@ -48,6 +54,10 @@
     createNewTitle = 'No identity found',
     createNewDescription = '',
     createNewLabel = 'Create new',
+    showCreateNewName = false,
+    createNewNameLabel = 'Name',
+    createNewNamePlaceholder = '',
+    createNewNameRequired = false,
     createNewBusy = false,
     createNewDisabled = false,
     createNewTestId = 'identity-recovery-create-new',
@@ -66,6 +76,7 @@
   let seedPassphrase = $state('');
   let nip46Connection = $state('');
   let nip46Relay = $state('');
+  let createNewName = $state('');
   let submittingImmediate = $state(false);
   let creatingImmediate = $state(false);
   let appliedInitialRequestKey = $state('');
@@ -73,6 +84,8 @@
 
   const errorId = `iris-identity-recovery-${Math.random().toString(36).slice(2)}-error`;
   const effectiveCreateNewBusy = $derived(createNewBusy || creatingImmediate);
+  const createNewRequest = $derived(normalizeIdentityCreateRequest({ name: createNewName }));
+  const createNewNameMissing = $derived(showCreateNewName && createNewNameRequired && !createNewRequest.name);
   const effectiveDisabled = $derived(disabled || submittingImmediate || effectiveCreateNewBusy);
   const canCreateNew = $derived(
     Boolean(onCreateNew)
@@ -80,6 +93,7 @@
       && !disabled
       && !submittingImmediate
       && !createNewDisabled
+      && !createNewNameMissing
       && !effectiveCreateNewBusy,
   );
   const visibleMethods = $derived(
@@ -185,7 +199,7 @@
     if (!canCreateNew || !onCreateNew) return;
     creatingImmediate = true;
     try {
-      await onCreateNew();
+      await onCreateNew(createNewRequest);
     } finally {
       creatingImmediate = false;
     }
@@ -241,6 +255,24 @@
 
       {#if createNewDescription}
         <p class="result-description">{createNewDescription}</p>
+      {/if}
+
+      {#if showCreateNewName}
+        <label class="field">
+          <span>{createNewNameLabel}</span>
+          <input
+            type="text"
+            value={createNewName}
+            placeholder={createNewNamePlaceholder}
+            autocomplete="name"
+            autocapitalize="words"
+            spellcheck="true"
+            disabled={effectiveDisabled}
+            aria-required={createNewNameRequired ? 'true' : undefined}
+            data-testid="identity-create-name"
+            oninput={(event) => (createNewName = (event.currentTarget as HTMLInputElement).value)}
+          />
+        </label>
       {/if}
 
       {#if error}
