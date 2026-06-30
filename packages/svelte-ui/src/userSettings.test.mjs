@@ -36,6 +36,8 @@ test('user settings panel exposes expected user management actions', () => {
   assert.match(panelSource, /inviteStarting/);
   assert.match(panelSource, /invitePreparing/);
   assert.match(panelSource, /onResetInvite/);
+  assert.match(panelSource, /showAddDeviceSection = true/);
+  assert.match(panelSource, /canManage && showAddDeviceSection/);
   assert.match(panelSource, /showSummary/);
   assert.match(panelSource, /showDevicesHeading/);
   assert.match(panelSource, /showKeyBadges/);

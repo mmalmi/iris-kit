@@ -17,6 +17,7 @@
     inviteUrl?: string;
     inviteQrUrl?: string;
     canManage?: boolean;
+    showAddDeviceSection?: boolean;
     showSummary?: boolean;
     showDevicesHeading?: boolean;
     showKeyBadges?: boolean;
@@ -40,6 +41,7 @@
     inviteUrl = '',
     inviteQrUrl = '',
     canManage = false,
+    showAddDeviceSection = true,
     showSummary = true,
     showDevicesHeading = true,
     showKeyBadges = true,
@@ -63,15 +65,21 @@
 
   let showAddDevice = $state(false);
   let inviteStarting = $state(false);
+  let canShowAddDeviceSection = $derived(canManage && showAddDeviceSection);
   let effectiveKeyBadgeMode = $derived(keyBadgeMode ?? (showKeyBadges ? 'all' : 'none'));
   let invitePreparing = $derived(inviteBusy || inviteStarting);
 
   $effect(() => {
+    if (!canShowAddDeviceSection) {
+      showAddDevice = false;
+      inviteStarting = false;
+      return;
+    }
     if (pendingRequests.length > 0) showAddDevice = true;
   });
 
   $effect(() => {
-    if (inviteUrl || !showAddDevice) inviteStarting = false;
+    if (!canShowAddDeviceSection || inviteUrl || !showAddDevice) inviteStarting = false;
   });
 
   function keyBusy(key: UserSettingsKey, action: string): boolean {
@@ -91,6 +99,7 @@
   }
 
   async function toggleAddDevice(): Promise<void> {
+    if (!canShowAddDeviceSection) return;
     const nextShowAddDevice = !showAddDevice;
     showAddDevice = nextShowAddDevice;
     if (nextShowAddDevice && !inviteUrl && !invitePreparing) {
@@ -128,7 +137,7 @@
       </div>
     {/if}
 
-    {#if canManage}
+    {#if canShowAddDeviceSection}
       <div class="add-device-section" data-testid="user-add-device-section">
         <button
           type="button"
