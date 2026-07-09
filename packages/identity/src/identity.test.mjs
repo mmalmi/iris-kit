@@ -188,6 +188,18 @@ test('device approval requests use full payload links, not compact app_key links
     profileId,
     approvedByPubkey: admin,
   });
+  assert.throws(
+    () => parseDeviceApprovalReceiptEvent(receiptEvent, {
+      requestSecretKey,
+      request: {
+        ...request,
+        requestSecret: 'different_request_secret_abcdefghijklmnopqrstuvwxyz',
+      },
+      profileId,
+      approvedByPubkey: admin,
+    }),
+    /receipt secret mismatch/,
+  );
   const receiptRosterOp = parseDeviceApprovalReceiptRosterOp(receipt);
   const projection = projectNostrIdentityRoster(profileId, [bootstrap, receiptRosterOp]);
 
@@ -197,6 +209,25 @@ test('device approval requests use full payload links, not compact app_key links
   assert.equal(receiptRosterOp.op_id, approval.op_id);
   assert.equal(rosterOpMatchesDeviceApprovalReceipt(approval, receipt), true);
   assert.equal(projection.active_facets[device].capabilities?.can_write_roots, true);
+});
+
+test('device approval request generator uses separate base64url secret and request key', () => {
+  const deviceSecret = generateSecretKey();
+  const request = createDeviceApprovalRequest({
+    deviceAppKeySecretKey: deviceSecret,
+    requestedAt: 31,
+  });
+  const encoded = encodeDeviceApprovalRequest(request);
+  const parsed = parseDeviceApprovalRequest(encoded);
+
+  assert.equal(request.requestPubkey, getPublicKey(request.requestSecretKey));
+  assert.equal(request.deviceAppKeyPubkey, getPublicKey(deviceSecret));
+  assert.match(request.requestSecret, /^[A-Za-z0-9_-]{43}$/u);
+  assert.notEqual(request.requestSecret, Buffer.from(request.requestSecretKey).toString('hex'));
+  assert.equal(request.deviceAppKeyProof.includes(request.requestSecret), false);
+  assert.equal(parsed?.requestPubkey, request.requestPubkey);
+  assert.equal(parsed?.requestSecret, request.requestSecret);
+  assert.equal(parsed?.deviceAppKeyPubkey, request.deviceAppKeyPubkey);
 });
 
 test('admin approval projects the requested device as an AppKey facet', () => {

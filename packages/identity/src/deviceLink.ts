@@ -12,7 +12,7 @@ import {
   parseNostrIdentityDeviceApprovalRequest,
   approveNostrIdentityDeviceApprovalRequest,
   buildNostrIdentityDeviceApprovalReceiptEvent,
-  parseNostrIdentityDeviceApprovalReceiptEvent,
+  parseNostrIdentityDeviceApprovalReceiptEvent as parseSharedNostrIdentityDeviceApprovalReceiptEvent,
   parseNostrIdentityDeviceApprovalReceiptRosterOp,
   nostrIdentityRosterOpMatchesDeviceApprovalReceipt,
   pubkeyToNpub,
@@ -56,10 +56,18 @@ export const approveDeviceLinkRequest = approveNostrIdentityDeviceLinkRequest;
 export const createDeviceApprovalRequest = createNostrIdentityDeviceApprovalRequest;
 export const approveDeviceApprovalRequest = approveNostrIdentityDeviceApprovalRequest;
 export const buildDeviceApprovalReceiptEvent = buildNostrIdentityDeviceApprovalReceiptEvent;
-export const parseDeviceApprovalReceiptEvent = parseNostrIdentityDeviceApprovalReceiptEvent;
 export const parseDeviceApprovalReceiptRosterOp = parseNostrIdentityDeviceApprovalReceiptRosterOp;
 export const rosterOpMatchesDeviceApprovalReceipt = nostrIdentityRosterOpMatchesDeviceApprovalReceipt;
 export { pubkeyToNpub, npubToPubkey };
+
+export function parseDeviceApprovalReceiptEvent(
+  event: Parameters<typeof parseSharedNostrIdentityDeviceApprovalReceiptEvent>[0],
+  options: Parameters<typeof parseSharedNostrIdentityDeviceApprovalReceiptEvent>[1] & {
+    request: NostrIdentityDeviceApprovalRequest;
+  },
+): NostrIdentityDeviceApprovalReceipt {
+  return parseSharedNostrIdentityDeviceApprovalReceiptEvent(event, options);
+}
 
 export function encodeDeviceLinkInvite(invite: DeviceLinkInvite): string {
   return encodeNostrIdentityDeviceLinkInvite(invite, { prefix: DEVICE_LINK_INVITE_PREFIX });
