@@ -12,6 +12,7 @@
   interface Props {
     method?: IdentityRecoveryMethod;
     methods?: IdentityRecoveryMethod[];
+    methodLabels?: Partial<Record<IdentityRecoveryMethod, string>>;
     initialRequest?: IdentityRecoveryRequest | null;
     autoSubmitInitial?: boolean;
     methodLayout?: 'grid' | 'column';
@@ -42,6 +43,7 @@
   let {
     method = undefined,
     methods = undefined,
+    methodLabels = {},
     initialRequest = null,
     autoSubmitInitial = false,
     methodLayout = 'grid',
@@ -100,9 +102,13 @@
     IDENTITY_RECOVERY_METHODS.filter((option) => (
       (!methods || methods.includes(option.id))
         && (option.id !== 'nip07' || nostrAvailable)
-    )),
+    )).map((option) => ({
+      ...option,
+      label: methodLabels[option.id] ?? option.label,
+    })),
   );
-  const selectedOption = $derived(IDENTITY_RECOVERY_METHODS.find((option) => option.id === selected));
+  const selectedOption = $derived(visibleMethods.find((option) => option.id === selected));
+  const seedPhraseLabel = $derived(methodLabels.seed_phrase ?? 'Seed phrase');
   const request = $derived<IdentityRecoveryRequest | null>(selected ? {
     method: selected,
     ...(nsec ? { nsec } : {}),
@@ -354,7 +360,7 @@
       </label>
     {:else if selected === 'seed_phrase'}
       <label class="field">
-        <span>Seed phrase</span>
+        <span>{seedPhraseLabel}</span>
         <textarea
           value={seedWords}
           rows="3"
