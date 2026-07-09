@@ -4,8 +4,11 @@ import { finalizeEvent, generateSecretKey, getPublicKey, nip19, nip44 } from 'no
 import { generateSeedWords } from 'nostr-tools/nip06';
 import {
   attachNostrAppKeyToIdentity,
+  approveDeviceApprovalRequest,
   approveDeviceLinkRequest,
+  buildDeviceApprovalReceiptEvent,
   createAttachedNostrIdentitySession,
+  createDeviceApprovalRequest,
   createDeviceLinkInvite,
   createDeviceLinkRequest,
   createNostrIdentitySignerFromNip07,
@@ -14,10 +17,15 @@ import {
   createNostrIdentitySignerFromSeedPhrase,
   createLocalNostrIdentitySession,
   createPendingDeviceLinkSession,
+  encodeDeviceApprovalRequest,
   encodeDeviceLinkInvite,
+  isCompleteDeviceApprovalRequestInput,
   isCompleteDeviceLinkInviteInput,
   KIND_NOSTR_IDENTITY_FACET_ACCEPTANCE,
   KIND_NOSTR_IDENTITY_ROSTER_OP,
+  parseDeviceApprovalReceiptEvent,
+  parseDeviceApprovalReceiptRosterOp,
+  parseDeviceApprovalRequest,
   parseDeviceLinkRequestEvent,
   parseDeviceLinkInvite,
   clearNostrIdentitySession,
@@ -34,6 +42,7 @@ import {
   signerCanAttachAppKey,
   signerCanRemoveAppKey,
   restoreNostrIdentitySession,
+  rosterOpMatchesDeviceApprovalReceipt,
   serializeNostrIdentitySession,
   signDeviceLinkRequestEvent,
 } from './index.ts';
@@ -85,6 +94,109 @@ test('device link parser rejects legacy link-secret invite payloads', () => {
 
   assert.equal(parseDeviceLinkInvite(inviteUrl), null);
   assert.equal(isCompleteDeviceLinkInviteInput(inviteUrl), false);
+});
+
+test('device approval requests use full payload links, not compact app_key links', () => {
+  const adminSecret = generateSecretKey();
+  const admin = getPublicKey(adminSecret);
+  const deviceSecret = generateSecretKey();
+  const device = getPublicKey(deviceSecret);
+  const requestSecretKey = generateSecretKey();
+  const requestPubkey = getPublicKey(requestSecretKey);
+  const bootstrap = signNostrIdentityRosterOp({
+    signerSecretKey: adminSecret,
+    profileId,
+    createdAt: 20,
+    clientNonce: 'approval-bootstrap',
+    op: {
+      op: 'add_facet',
+      facet: {
+        pubkey: admin,
+        purposes: ['app_key'],
+        capabilities: {
+          can_write_roots: true,
+          can_admin_profile: true,
+          can_receive_secret_wraps: true,
+          can_decrypt_secret_epochs: true,
+        },
+        added_at: 20,
+      },
+    },
+  });
+  const request = createDeviceApprovalRequest({
+    deviceAppKeySecretKey: deviceSecret,
+    requestSecretKey,
+    requestSecret: 'secret_abcdefghijklmnopqrstuvwxyz123456',
+    requestedAt: 21,
+    requestType: 'device_link',
+    resources: [{ type: 'profile', id: profileId, scopes: ['write'] }],
+    expiresAt: 81,
+    profileId,
+    adminAppKeyPubkey: admin,
+    label: 'Phone',
+  });
+  const requestUrl = encodeDeviceApprovalRequest(request);
+
+  assert.equal(requestUrl.startsWith('https://drive.iris.to/approve-device/'), true);
+  assert.equal(requestUrl.includes('?app_key='), false);
+  assert.equal(requestUrl.includes('?device='), false);
+  assert.equal(isCompleteDeviceApprovalRequestInput(requestUrl), true);
+
+  const parsedRequest = parseDeviceApprovalRequest(requestUrl);
+  assert.deepEqual(parsedRequest, {
+    requestPubkey,
+    deviceAppKeyPubkey: device,
+    requestSecret: request.requestSecret,
+    deviceAppKeyProof: request.deviceAppKeyProof,
+    requestedAt: 21,
+    requestType: 'device_link',
+    resources: [{ type: 'profile', id: profileId, scopes: ['write'] }],
+    expiresAt: 81,
+    profileId,
+    adminAppKeyPubkey: admin,
+    label: 'Phone',
+  });
+  assert.equal(request.deviceAppKeyProof.includes(request.requestSecret), false);
+
+  const approvalContent = approveDeviceApprovalRequest({
+    request,
+    profileId,
+    rosterOps: [bootstrap],
+    approvedByPubkey: admin,
+    approvedAt: 22,
+    clientNonce: 'approve-device-full-flow',
+  });
+  const approval = signNostrIdentityRosterOp({
+    signerSecretKey: adminSecret,
+    profileId,
+    parents: approvalContent.parents,
+    createdAt: approvalContent.created_at,
+    clientNonce: approvalContent.client_nonce,
+    op: approvalContent.op,
+  });
+  const receiptEvent = buildDeviceApprovalReceiptEvent({
+    signerSecretKey: adminSecret,
+    request,
+    profileId,
+    approvedAt: 22,
+    subjectPubkey: admin,
+    rosterOpEvent: approval,
+  });
+  const receipt = parseDeviceApprovalReceiptEvent(receiptEvent, {
+    requestSecretKey,
+    request,
+    profileId,
+    approvedByPubkey: admin,
+  });
+  const receiptRosterOp = parseDeviceApprovalReceiptRosterOp(receipt);
+  const projection = projectNostrIdentityRoster(profileId, [bootstrap, receiptRosterOp]);
+
+  assert.equal(receipt.requestPubkey, requestPubkey);
+  assert.equal(receipt.deviceAppKeyPubkey, device);
+  assert.equal(receipt.rosterOpId, approval.op_id);
+  assert.equal(receiptRosterOp.op_id, approval.op_id);
+  assert.equal(rosterOpMatchesDeviceApprovalReceipt(approval, receipt), true);
+  assert.equal(projection.active_facets[device].capabilities?.can_write_roots, true);
 });
 
 test('admin approval projects the requested device as an AppKey facet', () => {
