@@ -1,6 +1,6 @@
 {
   "name": "@iris/identity",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "type": "module",
   "description": "Shared NostrIdentity identity and device-link helpers",

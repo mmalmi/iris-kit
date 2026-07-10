@@ -6,8 +6,10 @@ import {
   attachNostrAppKeyToIdentity,
   approveDeviceApprovalRequest,
   approveDeviceLinkRequest,
+  buildDeviceApprovalRequestEvent,
   buildDeviceApprovalReceiptEvent,
   createAttachedNostrIdentitySession,
+  createDeviceApprovalBootstrap,
   createDeviceApprovalRequest,
   createDeviceLinkInvite,
   createDeviceLinkRequest,
@@ -17,15 +19,17 @@ import {
   createNostrIdentitySignerFromSeedPhrase,
   createLocalNostrIdentitySession,
   createPendingDeviceLinkSession,
-  encodeDeviceApprovalRequest,
+  encodeDeviceApprovalBootstrap,
   encodeDeviceLinkInvite,
-  isCompleteDeviceApprovalRequestInput,
+  isCompleteDeviceApprovalBootstrapInput,
   isCompleteDeviceLinkInviteInput,
   KIND_NOSTR_IDENTITY_FACET_ACCEPTANCE,
   KIND_NOSTR_IDENTITY_ROSTER_OP,
+  NOSTR_IDENTITY_DEVICE_APPROVAL_BOOTSTRAP_MAX_URI_LENGTH,
   parseDeviceApprovalReceiptEvent,
   parseDeviceApprovalReceiptRosterOp,
-  parseDeviceApprovalRequest,
+  parseDeviceApprovalBootstrap,
+  parseDeviceApprovalRequestEvent,
   parseDeviceLinkRequestEvent,
   parseDeviceLinkInvite,
   clearNostrIdentitySession,
@@ -50,6 +54,11 @@ import {
 } from './index.ts';
 
 const profileId = '019ed693-4110-7352-8cc3-be90158ba91e';
+
+function decodeDeviceApprovalBootstrap(uri) {
+  const prefix = 'https://drive.iris.to/approve-device/';
+  return JSON.parse(Buffer.from(uri.slice(prefix.length), 'base64url').toString('utf8'));
+}
 
 test('device link invite round trips profile, admin AppKey, and invite pubkey', () => {
   const admin = getPublicKey(generateSecretKey());
@@ -98,14 +107,14 @@ test('device link parser rejects legacy link-secret invite payloads', () => {
   assert.equal(isCompleteDeviceLinkInviteInput(inviteUrl), false);
 });
 
-test('device approval requests use full payload links, not compact app_key links', () => {
+test('device approval QR carries only the strict bootstrap and fetches signed metadata separately', () => {
   const adminSecret = generateSecretKey();
   const admin = getPublicKey(adminSecret);
   const deviceSecret = generateSecretKey();
   const device = getPublicKey(deviceSecret);
   const requestSecretKey = generateSecretKey();
   const requestPubkey = getPublicKey(requestSecretKey);
-  const bootstrap = signNostrIdentityRosterOp({
+  const adminBootstrap = signNostrIdentityRosterOp({
     signerSecretKey: adminSecret,
     profileId,
     createdAt: 20,
@@ -128,7 +137,7 @@ test('device approval requests use full payload links, not compact app_key links
   const request = createDeviceApprovalRequest({
     deviceAppKeySecretKey: deviceSecret,
     requestSecretKey,
-    requestSecret: 'secret_abcdefghijklmnopqrstuvwxyz123456',
+    requestSecret: Buffer.alloc(32, 7).toString('base64url'),
     requestedAt: 21,
     requestType: 'device_link',
     resources: [{ type: 'profile', id: profileId, scopes: ['write'] }],
@@ -137,33 +146,39 @@ test('device approval requests use full payload links, not compact app_key links
     adminAppKeyPubkey: admin,
     label: 'Phone',
   });
-  const requestUrl = encodeDeviceApprovalRequest(request);
+  const bootstrap = createDeviceApprovalBootstrap(request);
+  const requestUrl = encodeDeviceApprovalBootstrap(bootstrap);
 
   assert.equal(requestUrl.startsWith('https://drive.iris.to/approve-device/'), true);
-  assert.equal(requestUrl.includes('?app_key='), false);
-  assert.equal(requestUrl.includes('?device='), false);
-  assert.equal(isCompleteDeviceApprovalRequestInput(requestUrl), true);
-
-  const parsedRequest = parseDeviceApprovalRequest(requestUrl);
-  assert.deepEqual(parsedRequest, {
-    requestPubkey,
-    deviceAppKeyPubkey: device,
+  assert.equal(requestUrl.length < NOSTR_IDENTITY_DEVICE_APPROVAL_BOOTSTRAP_MAX_URI_LENGTH, true);
+  assert.deepEqual(decodeDeviceApprovalBootstrap(requestUrl), {
+    deviceAppKeyNpub: nip19.npubEncode(device),
+    requestNpub: nip19.npubEncode(requestPubkey),
     requestSecret: request.requestSecret,
-    deviceAppKeyProof: request.deviceAppKeyProof,
-    requestedAt: 21,
-    requestType: 'device_link',
-    resources: [{ type: 'profile', id: profileId, scopes: ['write'] }],
-    expiresAt: 81,
-    profileId,
-    adminAppKeyPubkey: admin,
-    label: 'Phone',
   });
+  assert.equal(isCompleteDeviceApprovalBootstrapInput(requestUrl), true);
+  assert.deepEqual(parseDeviceApprovalBootstrap(requestUrl), bootstrap);
   assert.equal(request.deviceAppKeyProof.includes(request.requestSecret), false);
 
+  for (const extra of ['deviceAppKeyProof', 'resources', 'relay', 'requestedAt']) {
+    const invalidPayload = {
+      ...decodeDeviceApprovalBootstrap(requestUrl),
+      [extra]: true,
+    };
+    const invalidUrl = `https://drive.iris.to/approve-device/${Buffer.from(JSON.stringify(invalidPayload)).toString('base64url')}`;
+    assert.equal(parseDeviceApprovalBootstrap(invalidUrl), null);
+  }
+
+  const requestEvent = buildDeviceApprovalRequestEvent({ request, requestSecretKey });
+  const parsedRequest = parseDeviceApprovalRequestEvent(requestEvent, bootstrap);
+  const { requestSecretKey: _requestSecretKey, ...transportedRequest } = request;
+  assert.deepEqual(parsedRequest, transportedRequest);
+  assert.equal(JSON.stringify(requestEvent).includes(request.requestSecret), false);
+
   const approvalContent = approveDeviceApprovalRequest({
-    request,
+    request: parsedRequest,
     profileId,
-    rosterOps: [bootstrap],
+    rosterOps: [adminBootstrap],
     approvedByPubkey: admin,
     approvedAt: 22,
     clientNonce: 'approve-device-full-flow',
@@ -178,7 +193,7 @@ test('device approval requests use full payload links, not compact app_key links
   });
   const receiptEvent = buildDeviceApprovalReceiptEvent({
     signerSecretKey: adminSecret,
-    request,
+    request: parsedRequest,
     profileId,
     approvedAt: 22,
     subjectPubkey: admin,
@@ -186,7 +201,7 @@ test('device approval requests use full payload links, not compact app_key links
   });
   const receipt = parseDeviceApprovalReceiptEvent(receiptEvent, {
     requestSecretKey,
-    request,
+    request: parsedRequest,
     profileId,
     approvedByPubkey: admin,
   });
@@ -194,8 +209,8 @@ test('device approval requests use full payload links, not compact app_key links
     () => parseDeviceApprovalReceiptEvent(receiptEvent, {
       requestSecretKey,
       request: {
-        ...request,
-        requestSecret: 'different_request_secret_abcdefghijklmnopqrstuvwxyz',
+        ...parsedRequest,
+        requestSecret: Buffer.alloc(32, 8).toString('base64url'),
       },
       profileId,
       approvedByPubkey: admin,
@@ -203,7 +218,7 @@ test('device approval requests use full payload links, not compact app_key links
     /receipt secret mismatch/,
   );
   const receiptRosterOp = parseDeviceApprovalReceiptRosterOp(receipt);
-  const projection = projectNostrIdentityRoster(profileId, [bootstrap, receiptRosterOp]);
+  const projection = projectNostrIdentityRoster(profileId, [adminBootstrap, receiptRosterOp]);
 
   assert.equal(receipt.requestPubkey, requestPubkey);
   assert.equal(receipt.deviceAppKeyPubkey, device);
@@ -219,17 +234,18 @@ test('device approval request generator uses separate base64url secret and reque
     deviceAppKeySecretKey: deviceSecret,
     requestedAt: 31,
   });
-  const encoded = encodeDeviceApprovalRequest(request);
-  const parsed = parseDeviceApprovalRequest(encoded);
+  const bootstrap = createDeviceApprovalBootstrap(request);
+  const encoded = encodeDeviceApprovalBootstrap(bootstrap);
+  const parsed = parseDeviceApprovalBootstrap(encoded);
 
   assert.equal(request.requestPubkey, getPublicKey(request.requestSecretKey));
   assert.equal(request.deviceAppKeyPubkey, getPublicKey(deviceSecret));
   assert.match(request.requestSecret, /^[A-Za-z0-9_-]{43}$/u);
   assert.notEqual(request.requestSecret, Buffer.from(request.requestSecretKey).toString('hex'));
   assert.equal(request.deviceAppKeyProof.includes(request.requestSecret), false);
-  assert.equal(parsed?.requestPubkey, request.requestPubkey);
+  assert.equal(parsed?.requestNpub, nip19.npubEncode(request.requestPubkey));
   assert.equal(parsed?.requestSecret, request.requestSecret);
-  assert.equal(parsed?.deviceAppKeyPubkey, request.deviceAppKeyPubkey);
+  assert.equal(parsed?.deviceAppKeyNpub, nip19.npubEncode(request.deviceAppKeyPubkey));
 });
 
 test('device approval request relay resources round trip through the signed proof', () => {
@@ -240,7 +256,14 @@ test('device approval request relay resources round trip through the signed proo
     requestedAt: 1_700_000_100,
     resources: [relayResource],
   });
-  const parsed = parseDeviceApprovalRequest(encodeDeviceApprovalRequest(request));
+  const event = buildDeviceApprovalRequestEvent({
+    request,
+    requestSecretKey: request.requestSecretKey,
+  });
+  const parsed = parseDeviceApprovalRequestEvent(
+    event,
+    createDeviceApprovalBootstrap(request),
+  );
 
   assert.deepEqual(relayResource, {
     type: 'nostr_relay',

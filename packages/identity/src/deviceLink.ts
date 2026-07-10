@@ -8,8 +8,11 @@ import {
   parseNostrIdentityDeviceLinkRequestEvent,
   approveNostrIdentityDeviceLinkRequest,
   createNostrIdentityDeviceApprovalRequest,
-  encodeNostrIdentityDeviceApprovalRequest,
-  parseNostrIdentityDeviceApprovalRequest,
+  createNostrIdentityDeviceApprovalBootstrap,
+  encodeCompactNostrIdentityDeviceApprovalRequest,
+  parseCompactNostrIdentityDeviceApprovalRequest,
+  buildNostrIdentityDeviceApprovalRequestEvent,
+  parseNostrIdentityDeviceApprovalRequestEvent,
   nostrIdentityDeviceApprovalRelayResource,
   nostrIdentityDeviceApprovalRequestRelays,
   approveNostrIdentityDeviceApprovalRequest,
@@ -21,6 +24,7 @@ import {
   npubToPubkey,
   type AdminNostrIdentityDeviceLinkInvite,
   type LocalNostrIdentityDeviceApprovalRequest,
+  type NostrIdentityDeviceApprovalBootstrap,
   type NostrIdentityDeviceApprovalReceipt,
   type NostrIdentityDeviceApprovalRequest,
   type NostrIdentityDeviceApprovalRequestedResource,
@@ -37,7 +41,6 @@ export const DEVICE_LINK_INVITE_WEB_PREFIX = DEVICE_LINK_INVITE_PREFIX;
 export const DEVICE_LINK_INVITE_VERSION = 1;
 export const DEVICE_APPROVAL_REQUEST_PREFIX = 'https://drive.iris.to/approve-device/';
 export const DEVICE_APPROVAL_REQUEST_WEB_PREFIX = DEVICE_APPROVAL_REQUEST_PREFIX;
-export const DEVICE_APPROVAL_REQUEST_VERSION = 1;
 export { KIND_NOSTR_IDENTITY_DEVICE_LINK_REQUEST as KIND_DEVICE_LINK_REQUEST } from 'nostr-social-graph';
 
 export type DeviceLinkInvite = NostrIdentityDeviceLinkInvite;
@@ -47,6 +50,7 @@ export type SignedDeviceLinkRequest = SignedNostrIdentityDeviceLinkRequest;
 export type DeviceLinkRequestScope = NostrIdentityDeviceLinkRequestScope;
 export type DeviceApprovalRequest = NostrIdentityDeviceApprovalRequest;
 export type LocalDeviceApprovalRequest = LocalNostrIdentityDeviceApprovalRequest;
+export type DeviceApprovalBootstrap = NostrIdentityDeviceApprovalBootstrap;
 export type DeviceApprovalReceipt = NostrIdentityDeviceApprovalReceipt;
 export type DeviceApprovalRequestedResource = NostrIdentityDeviceApprovalRequestedResource;
 
@@ -56,6 +60,9 @@ export const signDeviceLinkRequestEvent = signNostrIdentityDeviceLinkRequestEven
 export const parseDeviceLinkRequestEvent = parseNostrIdentityDeviceLinkRequestEvent;
 export const approveDeviceLinkRequest = approveNostrIdentityDeviceLinkRequest;
 export const createDeviceApprovalRequest = createNostrIdentityDeviceApprovalRequest;
+export const createDeviceApprovalBootstrap = createNostrIdentityDeviceApprovalBootstrap;
+export const buildDeviceApprovalRequestEvent = buildNostrIdentityDeviceApprovalRequestEvent;
+export const parseDeviceApprovalRequestEvent = parseNostrIdentityDeviceApprovalRequestEvent;
 export {
   nostrIdentityDeviceApprovalRelayResource,
   nostrIdentityDeviceApprovalRequestRelays,
@@ -95,20 +102,22 @@ export function deviceLinkInviteWebUrl(inviteUrl: string): string {
   return inviteUrl.replace(DEVICE_LINK_INVITE_PREFIX, DEVICE_LINK_INVITE_WEB_PREFIX);
 }
 
-export function encodeDeviceApprovalRequest(request: DeviceApprovalRequest): string {
-  return encodeNostrIdentityDeviceApprovalRequest(request, { prefix: DEVICE_APPROVAL_REQUEST_PREFIX });
+export function encodeDeviceApprovalBootstrap(bootstrap: DeviceApprovalBootstrap): string {
+  return encodeCompactNostrIdentityDeviceApprovalRequest(bootstrap, {
+    prefix: DEVICE_APPROVAL_REQUEST_PREFIX,
+  });
 }
 
-export function parseDeviceApprovalRequest(input: string): DeviceApprovalRequest | null {
-  return parseNostrIdentityDeviceApprovalRequest(input, {
+export function parseDeviceApprovalBootstrap(input: string): DeviceApprovalBootstrap | null {
+  return parseCompactNostrIdentityDeviceApprovalRequest(input, {
     prefixes: [DEVICE_APPROVAL_REQUEST_PREFIX],
   });
 }
 
-export function isCompleteDeviceApprovalRequestInput(input: string): boolean {
-  return parseDeviceApprovalRequest(input) !== null;
+export function isCompleteDeviceApprovalBootstrapInput(input: string): boolean {
+  return parseDeviceApprovalBootstrap(input) !== null;
 }
 
-export function deviceApprovalRequestWebUrl(requestUrl: string): string {
-  return requestUrl.replace(DEVICE_APPROVAL_REQUEST_PREFIX, DEVICE_APPROVAL_REQUEST_WEB_PREFIX);
+export function deviceApprovalBootstrapWebUrl(bootstrapUrl: string): string {
+  return bootstrapUrl.replace(DEVICE_APPROVAL_REQUEST_PREFIX, DEVICE_APPROVAL_REQUEST_WEB_PREFIX);
 }
