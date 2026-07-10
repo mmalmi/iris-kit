@@ -207,6 +207,13 @@ test('device approval bootstrap parser rejects extras and legacy link shapes', (
     ...bootstrap,
     requestSecret: Buffer.alloc(31, 1).toString('base64url'),
   })), null);
+  const fullEvent = finalizeEvent({
+    kind: 1,
+    created_at: 1,
+    tags: [],
+    content: JSON.stringify(bootstrap),
+  }, generateSecretKey());
+  assert.equal(parseDeviceApprovalBootstrap(encodeApprovalPayload(fullEvent)), null);
   assert.equal(parseDeviceApprovalBootstrap(`${encodeDeviceApprovalBootstrap(bootstrap)}?relay=wss://example.com`), null);
   const payload = encodeDeviceApprovalBootstrap(bootstrap).slice(DEVICE_APPROVAL_BOOTSTRAP_PREFIX.length);
   assert.equal(parseDeviceApprovalBootstrap(`nostr-identity://device-approval/${payload}`), null);

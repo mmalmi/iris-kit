@@ -1,19 +1,27 @@
 import {
   APP_KEY_WRITER_CAPABILITIES,
   FACT_OP_KIND,
+  NOSTR_IDENTITY_DEVICE_APPROVAL_BOOTSTRAP_MAX_URI_LENGTH as SHARED_DEVICE_APPROVAL_BOOTSTRAP_MAX_URI_LENGTH,
+  NOSTR_IDENTITY_DEVICE_APPROVAL_LABEL_MAX_BYTES as SHARED_DEVICE_APPROVAL_LABEL_MAX_BYTES,
   NOSTR_IDENTITY_DEVICE_APPROVAL_RECEIPT_SCHEMA,
   NOSTR_IDENTITY_DEVICE_APPROVAL_RECEIPT_TYPE,
   createAddAppKeyRosterOp,
+  createNostrIdentityDeviceApprovalBootstrap,
+  encodeNostrIdentityDeviceApprovalBootstrap,
   normalizeHexPubkey,
+  nostrIdentityDeviceApprovalBootstrapHasPrefix,
   nostrIdentityDeviceApprovalClientNonce,
   nostrIdentityRosterOpMatchesDeviceApprovalReceipt,
   nostrIdentityRosterParentIds,
   npubToPubkey,
+  parseNostrIdentityDeviceApprovalBootstrap,
   parseNostrIdentityDeviceApprovalReceiptEvent as parseSharedNostrIdentityDeviceApprovalReceiptEvent,
   parseNostrIdentityDeviceApprovalReceiptRosterOp,
   parseNostrIdentityRosterOpEvent,
   pubkeyToNpub,
+  randomNostrIdentityDeviceApprovalSecret,
   type NostrIdentityCapabilities,
+  type NostrIdentityDeviceApprovalBootstrap,
   type NostrIdentityDeviceApprovalReceipt,
   type NostrIdentityId,
   type NostrIdentityRosterOpContent,
@@ -22,19 +30,16 @@ import {
 import { finalizeEvent, generateSecretKey, getPublicKey, nip44, type Event } from 'nostr-tools';
 
 export const DEVICE_APPROVAL_BOOTSTRAP_PREFIX = 'https://drive.iris.to/approve-device/';
-export const NOSTR_IDENTITY_DEVICE_APPROVAL_BOOTSTRAP_MAX_URI_LENGTH = 384;
-export const NOSTR_IDENTITY_DEVICE_APPROVAL_LABEL_MAX_BYTES = 16;
+export const NOSTR_IDENTITY_DEVICE_APPROVAL_BOOTSTRAP_MAX_URI_LENGTH =
+  SHARED_DEVICE_APPROVAL_BOOTSTRAP_MAX_URI_LENGTH;
+export const NOSTR_IDENTITY_DEVICE_APPROVAL_LABEL_MAX_BYTES =
+  SHARED_DEVICE_APPROVAL_LABEL_MAX_BYTES;
 export {
   NOSTR_IDENTITY_DEVICE_APPROVAL_RECEIPT_SCHEMA,
   NOSTR_IDENTITY_DEVICE_APPROVAL_RECEIPT_TYPE,
 };
 
-export interface DeviceApprovalBootstrap {
-  deviceAppKeyNpub: string;
-  requestNpub: string;
-  requestSecret: string;
-  label?: string;
-}
+export type DeviceApprovalBootstrap = NostrIdentityDeviceApprovalBootstrap;
 
 export interface LocalDeviceApprovalBootstrap {
   bootstrap: DeviceApprovalBootstrap;
@@ -43,12 +48,6 @@ export interface LocalDeviceApprovalBootstrap {
 
 export type DeviceApprovalReceipt = NostrIdentityDeviceApprovalReceipt;
 
-const DEVICE_APPROVAL_BOOTSTRAP_FIELDS = new Set([
-  'deviceAppKeyNpub',
-  'requestNpub',
-  'requestSecret',
-  'label',
-]);
 const DEVICE_APPROVAL_BOOTSTRAP_OPTION_FIELDS = new Set([
   'deviceAppKeySecretKey',
   'requestSecretKey',
@@ -68,14 +67,11 @@ export function createDeviceApprovalBootstrap(options: {
   const deviceAppKeyPubkey = getPublicKey(options.deviceAppKeySecretKey);
   const requestSecretKey = options.requestSecretKey ?? generateSecretKey();
   const requestPubkey = getPublicKey(requestSecretKey);
-  if (deviceAppKeyPubkey === requestPubkey) {
-    throw new Error('device approval stable and ephemeral keys must be distinct');
-  }
   return {
-    bootstrap: normalizeDeviceApprovalBootstrap({
-      deviceAppKeyNpub: pubkeyToNpub(deviceAppKeyPubkey),
-      requestNpub: pubkeyToNpub(requestPubkey),
-      requestSecret: base64UrlEncode(generateSecretKey()),
+    bootstrap: createNostrIdentityDeviceApprovalBootstrap({
+      deviceAppKeyPubkey,
+      requestPubkey,
+      requestSecret: randomNostrIdentityDeviceApprovalSecret(),
       ...(options.label !== undefined ? { label: options.label } : {}),
     }),
     requestSecretKey,
@@ -83,32 +79,23 @@ export function createDeviceApprovalBootstrap(options: {
 }
 
 export function encodeDeviceApprovalBootstrap(bootstrap: DeviceApprovalBootstrap): string {
-  const normalized = normalizeDeviceApprovalBootstrap(bootstrap);
-  const uri = `${DEVICE_APPROVAL_BOOTSTRAP_PREFIX}${base64UrlEncode(
-    new TextEncoder().encode(JSON.stringify(normalized)),
-  )}`;
-  if (uri.length > NOSTR_IDENTITY_DEVICE_APPROVAL_BOOTSTRAP_MAX_URI_LENGTH) {
-    throw new Error(
-      `device approval bootstrap URI must not exceed ${NOSTR_IDENTITY_DEVICE_APPROVAL_BOOTSTRAP_MAX_URI_LENGTH} characters`,
-    );
-  }
-  return uri;
+  return encodeNostrIdentityDeviceApprovalBootstrap(bootstrap, {
+    prefix: DEVICE_APPROVAL_BOOTSTRAP_PREFIX,
+  });
 }
 
 export function parseDeviceApprovalBootstrap(input: string): DeviceApprovalBootstrap | null {
-  const payload = strictBootstrapPayload(input);
-  if (payload === null) return null;
-  try {
-    const bytes = base64UrlDecode(payload);
-    const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as unknown;
-    return normalizeDeviceApprovalBootstrap(value);
-  } catch {
-    return null;
-  }
+  if (!input.startsWith(DEVICE_APPROVAL_BOOTSTRAP_PREFIX)) return null;
+  return parseNostrIdentityDeviceApprovalBootstrap(input, {
+    prefixes: [DEVICE_APPROVAL_BOOTSTRAP_PREFIX],
+  });
 }
 
 export function deviceApprovalBootstrapHasPrefix(input: string): boolean {
-  return strictBootstrapPayload(input) !== null;
+  return input.startsWith(DEVICE_APPROVAL_BOOTSTRAP_PREFIX)
+    && nostrIdentityDeviceApprovalBootstrapHasPrefix(input, {
+      prefixes: [DEVICE_APPROVAL_BOOTSTRAP_PREFIX],
+    });
 }
 
 export function isCompleteDeviceApprovalBootstrapInput(input: string): boolean {
@@ -222,68 +209,12 @@ export const parseDeviceApprovalReceiptRosterOp = parseNostrIdentityDeviceApprov
 export const rosterOpMatchesDeviceApprovalReceipt = nostrIdentityRosterOpMatchesDeviceApprovalReceipt;
 export { npubToPubkey, pubkeyToNpub };
 
-function normalizeDeviceApprovalBootstrap(value: unknown): DeviceApprovalBootstrap {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('device approval bootstrap must be an object');
-  }
-  const record = value as Record<string, unknown>;
-  const unknownField = Object.keys(record).find((field) => !DEVICE_APPROVAL_BOOTSTRAP_FIELDS.has(field));
-  if (unknownField !== undefined) {
-    throw new Error(`device approval bootstrap has unknown field ${unknownField}`);
-  }
-  const deviceAppKeyNpub = requireCanonicalNpub(record.deviceAppKeyNpub, 'device AppKey');
-  const requestNpub = requireCanonicalNpub(record.requestNpub, 'request');
-  if (deviceAppKeyNpub === requestNpub) {
-    throw new Error('device approval stable and ephemeral keys must be distinct');
-  }
-  const label = normalizeDeviceApprovalLabel(record.label);
-  return {
-    deviceAppKeyNpub,
-    requestNpub,
-    requestSecret: requireRequestSecret(record.requestSecret),
-    ...(label !== undefined ? { label } : {}),
-  };
-}
-
-function strictBootstrapPayload(input: string): string | null {
-  const value = input.trim();
-  if (!value.startsWith(DEVICE_APPROVAL_BOOTSTRAP_PREFIX)) return null;
-  const payload = value.slice(DEVICE_APPROVAL_BOOTSTRAP_PREFIX.length);
-  if (!payload || payload.includes('?') || payload.includes('#')) return null;
-  return payload;
-}
-
-function normalizeDeviceApprovalLabel(value: unknown): string | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== 'string') throw new Error('device approval label must be a string');
-  const label = value.trim();
-  if (!label) return undefined;
-  if (new TextEncoder().encode(label).length > NOSTR_IDENTITY_DEVICE_APPROVAL_LABEL_MAX_BYTES) {
-    throw new Error(
-      `device approval label exceeds ${NOSTR_IDENTITY_DEVICE_APPROVAL_LABEL_MAX_BYTES} UTF-8 bytes`,
-    );
-  }
-  return label;
-}
-
-function requireCanonicalNpub(value: unknown, label: string): string {
-  if (typeof value !== 'string') throw new Error(`${label} must be a canonical npub`);
-  const pubkey = npubToPubkey(value);
-  if (!pubkey || pubkeyToNpub(pubkey) !== value) {
-    throw new Error(`${label} must be a canonical npub`);
-  }
-  return value;
-}
-
-function requireRequestSecret(value: unknown): string {
-  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/u.test(value)) {
-    throw new Error('device approval request secret must be canonical unpadded base64url');
-  }
-  const bytes = base64UrlDecode(value);
-  if (bytes.length !== 32 || base64UrlEncode(bytes) !== value) {
-    throw new Error('device approval request secret must encode exactly 32 bytes');
-  }
-  return value;
+function normalizeDeviceApprovalBootstrap(
+  bootstrap: DeviceApprovalBootstrap,
+): DeviceApprovalBootstrap {
+  const normalized = parseDeviceApprovalBootstrap(encodeDeviceApprovalBootstrap(bootstrap));
+  if (normalized === null) throw new Error('invalid device approval bootstrap');
+  return normalized;
 }
 
 function requirePubkey(value: string, label: string): string {
@@ -323,21 +254,4 @@ function assertReceiptRosterOpMatches(
   if (!rosterOpMatchesDeviceApprovalReceipt(op, receipt)) {
     throw new Error('device approval receipt roster device mismatch');
   }
-}
-
-function base64UrlEncode(bytes: Uint8Array): string {
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/gu, '-').replace(/\//gu, '_').replace(/=+$/u, '');
-}
-
-function base64UrlDecode(value: string): Uint8Array {
-  if (!/^[A-Za-z0-9_-]+$/u.test(value) || value.length % 4 === 1) {
-    throw new Error('invalid base64url');
-  }
-  const padded = `${value.replace(/-/gu, '+').replace(/_/gu, '/')}${'='.repeat((4 - value.length % 4) % 4)}`;
-  const binary = atob(padded);
-  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-  if (base64UrlEncode(bytes) !== value) throw new Error('noncanonical base64url');
-  return bytes;
 }
