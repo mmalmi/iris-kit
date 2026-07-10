@@ -1,6 +1,6 @@
 # @iris/identity
 
-Compatibility/session helpers for NostrIdentity AppKeys, login signers, and device-link sessions.
+Compatibility/session helpers for NostrIdentity AppKeys, login signers, and device approval.
 Canonical NostrIdentity wire types, fact-event builders/parsers, projections, and secret-epoch
 helpers live in `nostr-social-graph` and are re-exported from this package for migration.
 
@@ -38,9 +38,13 @@ Browser apps can use this package for local account/session state while importin
 
 - `createLocalNostrIdentitySession(...)`
 - `createAttachedNostrIdentitySession(...)`
+- `createPendingDeviceApprovalSession(...)`
+- `completePendingDeviceApprovalSession(...)`
 - `loadNostrIdentitySession(...)`
 - `saveNostrIdentitySession(...)`
 - `clearNostrIdentitySession(...)`
 - `publishNostrIdentitySessionRosterEvents(...)`
 
-These helpers persist the local AppKey secret and signed roster facts only. Public roster facts do not carry human device labels; UI labels belong in encrypted payload facts or local session state.
+Pending approval sessions keep the stable AppKey secret, a distinct ephemeral request key, and the strict approval bootstrap locally. The QR/link bootstrap contains only the stable npub, request npub, 32-byte secret, and an optional label of at most 16 UTF-8 bytes. It is the complete approval input: no request event is published, fetched, or stored. Only the encrypted approval receipt and its signed roster result are transported back.
+
+Public roster facts do not carry human device labels; UI labels belong in encrypted payload facts or local session state.

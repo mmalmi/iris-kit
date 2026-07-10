@@ -152,5 +152,6 @@ async function runRemovalHook(
   context: NostrIdentityAppKeyRemovalContext,
 ): Promise<NostrIdentityAppKeySecretRewrapResult[]> {
   if (!hook) return [];
-  return (await hook(context)) ?? [];
+  const result = await hook(context);
+  return Array.isArray(result) ? result : [];
 }

@@ -3,7 +3,7 @@
   "version": "0.3.0",
   "license": "MIT",
   "type": "module",
-  "description": "Shared NostrIdentity identity and device-link helpers",
+  "description": "Shared NostrIdentity identity and device-approval bootstrap helpers",
   "exports": {
     ".": {
       "types": "./src/index.ts",

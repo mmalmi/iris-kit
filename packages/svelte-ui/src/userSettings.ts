@@ -16,13 +16,6 @@ export interface UserSettingsKey {
   online?: boolean;
 }
 
-export interface UserSettingsPendingRequest {
-  id: string;
-  pubkey: string;
-  label?: string;
-  requestedAt?: number;
-}
-
 export function userSettingsKeyLabel(key: UserSettingsKey): string {
   const label = key.label?.trim();
   if (label && label.toLowerCase() !== 'this device') return label;

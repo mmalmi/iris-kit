@@ -193,7 +193,8 @@ async function runRewrapHook(
   context: NostrIdentityAppKeySecretRewrapContext,
 ): Promise<NostrIdentityAppKeySecretRewrapResult[]> {
   if (!hook) return [];
-  return (await hook(context)) ?? [];
+  const result = await hook(context);
+  return Array.isArray(result) ? result : [];
 }
 
 function currentUnixSeconds(): number {

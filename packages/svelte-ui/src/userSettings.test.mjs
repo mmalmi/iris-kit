@@ -22,30 +22,22 @@ test('UserSettingsPanel is exported as a shared Svelte UI component', () => {
 
 test('user settings panel exposes expected user management actions', () => {
   assert.match(panelSource, /user-settings-panel/);
-  assert.match(panelSource, /user-add-device-toggle/);
-  assert.match(panelSource, /user-approve-link/);
   assert.match(panelSource, /user-grant-admin/);
   assert.match(panelSource, /user-revoke-admin/);
   assert.match(panelSource, /user-remove-key/);
   assert.match(panelSource, /user-key-status/);
   assert.match(panelSource, /data-device-status/);
-  assert.match(panelSource, /user-link-invite-qr/);
-  assert.match(panelSource, /user-link-invite-loading/);
-  assert.match(panelSource, /user-reset-link/);
-  assert.match(panelSource, /inviteQrUrl/);
-  assert.match(panelSource, /inviteStarting/);
-  assert.match(panelSource, /invitePreparing/);
-  assert.match(panelSource, /onResetInvite/);
-  assert.match(panelSource, /showAddDeviceSection = true/);
-  assert.match(panelSource, /canManage && showAddDeviceSection/);
   assert.match(panelSource, /showSummary/);
   assert.match(panelSource, /showDevicesHeading/);
   assert.match(panelSource, /showKeyBadges/);
   assert.match(panelSource, /keyBadgeMode/);
-  assert.match(panelSource, /Add Device/);
-  assert.match(panelSource, /Copy link/);
-  assert.match(panelSource, /Reset link/);
-  assert.match(panelSource, /Device requests/);
+  assert.doesNotMatch(panelSource, /user-add-device/);
+  assert.doesNotMatch(panelSource, /user-approve-link/);
+  assert.doesNotMatch(panelSource, /pendingRequests/);
+  assert.doesNotMatch(panelSource, /inviteUrl/);
+  assert.doesNotMatch(panelSource, /onCreateInvite/);
+  assert.doesNotMatch(panelSource, /onApproveRequest/);
+  assert.doesNotMatch(panelSource, /Device requests/);
   assert.doesNotMatch(panelSource, /user-create-link/);
   assert.doesNotMatch(panelSource, /copy-value/);
   assert.doesNotMatch(panelSource, /Create invite/);

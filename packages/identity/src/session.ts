@@ -1,9 +1,11 @@
 import { generateSecretKey, getPublicKey, nip19, type Event } from 'nostr-tools';
 import {
-  createDeviceLinkRequest,
-  parseDeviceLinkInvite,
-  type DeviceLinkInvite,
-  type DeviceLinkRequest,
+  createDeviceApprovalBootstrap,
+  encodeDeviceApprovalBootstrap,
+  parseDeviceApprovalBootstrap,
+  pubkeyToNpub,
+  type DeviceApprovalBootstrap,
+  type DeviceApprovalReceipt,
 } from './deviceLink.ts';
 import {
   APP_KEY_ADMIN_CAPABILITIES,
@@ -13,30 +15,55 @@ import {
 import { projectNostrIdentityRoster } from './profileProjection.ts';
 import { signNostrIdentityRosterOp } from './profileEvents.ts';
 
-export type NostrIdentitySessionStatus = 'active' | 'pending_device_link';
+export type NostrIdentitySessionStatus = 'active' | 'pending_device_approval';
 
-export interface NostrIdentitySession {
-  profileId: NostrIdentityId;
+interface NostrIdentitySessionBase {
   appKeyPubkey: string;
   appKeyNpub: string;
   appKeyNsec: string;
-  status: NostrIdentitySessionStatus;
   rosterOps: SignedNostrIdentityRosterOp[];
   createdAt: number;
   label?: string;
-  pendingDeviceLink?: DeviceLinkRequest;
 }
 
-export interface StoredNostrIdentitySession {
-  schema: 1;
+export interface ActiveNostrIdentitySession extends NostrIdentitySessionBase {
+  status: 'active';
+  profileId: NostrIdentityId;
+}
+
+export interface PendingNostrIdentityDeviceApproval {
+  bootstrap: DeviceApprovalBootstrap;
+  requestNsec: string;
+}
+
+export interface PendingNostrIdentitySession extends NostrIdentitySessionBase {
+  status: 'pending_device_approval';
+  pendingDeviceApproval: PendingNostrIdentityDeviceApproval;
+}
+
+export type NostrIdentitySession = ActiveNostrIdentitySession | PendingNostrIdentitySession;
+
+export interface StoredActiveNostrIdentitySession {
+  schema: 2;
   profileId: NostrIdentityId;
   appKeyNsec: string;
-  status: NostrIdentitySessionStatus;
+  status: 'active';
   rosterOps: SignedNostrIdentityRosterOp[];
   createdAt: number;
   label?: string;
-  pendingDeviceLink?: DeviceLinkRequest;
 }
+
+export interface StoredPendingNostrIdentitySession {
+  schema: 2;
+  appKeyNsec: string;
+  status: 'pending_device_approval';
+  createdAt: number;
+  pendingDeviceApproval: PendingNostrIdentityDeviceApproval;
+}
+
+export type StoredNostrIdentitySession =
+  | StoredActiveNostrIdentitySession
+  | StoredPendingNostrIdentitySession;
 
 export interface NostrIdentitySessionStorage {
   getItem(key: string): string | null;
@@ -51,9 +78,9 @@ export interface NostrIdentitySessionStoreOptions {
 
 export type NostrIdentityEventPublisher = (event: Event) => Awaitable<void>;
 
-export type Awaitable<T> = T | Promise<T>;
+type Awaitable<T> = T | Promise<T>;
 
-export const DEFAULT_NOSTR_IDENTITY_SESSION_STORAGE_KEY = 'iris:nostr-identity-session:v1';
+export const DEFAULT_NOSTR_IDENTITY_SESSION_STORAGE_KEY = 'iris:nostr-identity-session:v2';
 
 export function createLocalNostrIdentitySession(options: {
   profileId?: NostrIdentityId;
@@ -61,7 +88,7 @@ export function createLocalNostrIdentitySession(options: {
   createdAt?: number;
   clientNonce?: string;
   label?: string;
-} = {}): NostrIdentitySession {
+} = {}): ActiveNostrIdentitySession {
   const appKeySecretKey = options.appKeySecretKey ?? generateSecretKey();
   const appKeyPubkey = getPublicKey(appKeySecretKey);
   const profileId = options.profileId ?? randomProfileId();
@@ -95,72 +122,144 @@ export function createLocalNostrIdentitySession(options: {
   };
 }
 
-export function createPendingDeviceLinkSession(options: {
-  invite: DeviceLinkInvite | string;
+export function createPendingDeviceApprovalSession(options: {
   appKeySecretKey?: Uint8Array;
-  requestedAt?: number;
+  requestSecretKey?: Uint8Array;
+  requestSecret?: string;
+  createdAt?: number;
   label?: string;
-}): NostrIdentitySession {
-  const invite = typeof options.invite === 'string' ? parseDeviceLinkInvite(options.invite) : options.invite;
-  if (!invite) throw new Error('invalid device-link invite');
+} = {}): PendingNostrIdentitySession {
   const appKeySecretKey = options.appKeySecretKey ?? generateSecretKey();
   const appKeyPubkey = getPublicKey(appKeySecretKey);
-  const requestedAt = options.requestedAt ?? currentUnixSeconds();
-  const request = createDeviceLinkRequest({
-    invite,
-    deviceAppKeyPubkey: appKeyPubkey,
-    requestedAt,
-    label: options.label,
+  const createdAt = options.createdAt ?? currentUnixSeconds();
+  const local = createDeviceApprovalBootstrap({
+    deviceAppKeySecretKey: appKeySecretKey,
+    ...(options.requestSecretKey !== undefined ? { requestSecretKey: options.requestSecretKey } : {}),
+    ...(options.requestSecret !== undefined ? { requestSecret: options.requestSecret } : {}),
+    ...(options.label !== undefined ? { label: options.label } : {}),
   });
 
   return {
-    profileId: invite.profileId,
     appKeyPubkey,
     appKeyNpub: nip19.npubEncode(appKeyPubkey),
     appKeyNsec: nip19.nsecEncode(appKeySecretKey),
-    status: 'pending_device_link',
+    status: 'pending_device_approval',
     rosterOps: [],
-    createdAt: requestedAt,
-    ...(options.label?.trim() ? { label: options.label.trim() } : {}),
-    pendingDeviceLink: request,
+    createdAt,
+    ...(local.bootstrap.label !== undefined ? { label: local.bootstrap.label } : {}),
+    pendingDeviceApproval: {
+      bootstrap: local.bootstrap,
+      requestNsec: nip19.nsecEncode(local.requestSecretKey),
+    },
+  };
+}
+
+export function completePendingDeviceApprovalSession(
+  session: PendingNostrIdentitySession,
+  options: {
+    receipt: DeviceApprovalReceipt;
+    rosterOps: SignedNostrIdentityRosterOp[];
+  },
+): ActiveNostrIdentitySession {
+  const { bootstrap } = session.pendingDeviceApproval;
+  if (pubkeyToNpub(options.receipt.requestPubkey) !== bootstrap.requestNpub) {
+    throw new Error('device approval receipt request mismatch');
+  }
+  if (pubkeyToNpub(options.receipt.deviceAppKeyPubkey) !== session.appKeyNpub) {
+    throw new Error('device approval receipt device mismatch');
+  }
+  if (options.receipt.requestSecret !== bootstrap.requestSecret) {
+    throw new Error('device approval receipt secret mismatch');
+  }
+  if (
+    options.receipt.rosterOpId !== undefined
+    && !options.rosterOps.some((op) => op.op_id === options.receipt.rosterOpId)
+  ) {
+    throw new Error('device approval receipt roster op is missing');
+  }
+  const projection = projectNostrIdentityRoster(options.receipt.profileId, options.rosterOps);
+  if (!projection.active_facets[session.appKeyPubkey]) {
+    throw new Error('approved NostrIdentity AppKey is not active in its roster');
+  }
+  return {
+    profileId: options.receipt.profileId,
+    appKeyPubkey: session.appKeyPubkey,
+    appKeyNpub: session.appKeyNpub,
+    appKeyNsec: session.appKeyNsec,
+    status: 'active',
+    rosterOps: options.rosterOps,
+    createdAt: session.createdAt,
+    ...(session.label !== undefined ? { label: session.label } : {}),
   };
 }
 
 export function serializeNostrIdentitySession(session: NostrIdentitySession): StoredNostrIdentitySession {
+  if (session.status === 'pending_device_approval') {
+    return {
+      schema: 2,
+      appKeyNsec: session.appKeyNsec,
+      status: session.status,
+      createdAt: session.createdAt,
+      pendingDeviceApproval: session.pendingDeviceApproval,
+    };
+  }
   return {
-    schema: 1,
+    schema: 2,
     profileId: session.profileId,
     appKeyNsec: session.appKeyNsec,
     status: session.status,
     rosterOps: session.rosterOps,
     createdAt: session.createdAt,
     ...(session.label ? { label: session.label } : {}),
-    ...(session.pendingDeviceLink ? { pendingDeviceLink: session.pendingDeviceLink } : {}),
   };
 }
 
 export function restoreNostrIdentitySession(stored: StoredNostrIdentitySession): NostrIdentitySession {
-  if (stored.schema !== 1) throw new Error(`unsupported NostrIdentity session schema ${stored.schema}`);
-  const decoded = nip19.decode(stored.appKeyNsec);
-  if (decoded.type !== 'nsec') throw new Error('stored NostrIdentity AppKey is not an nsec');
-  const secretKey = decoded.data as Uint8Array;
-  const appKeyPubkey = getPublicKey(secretKey);
-  if (stored.status === 'active') {
-    const projection = projectNostrIdentityRoster(stored.profileId, stored.rosterOps);
-    if (!projection.active_facets[appKeyPubkey]) {
-      throw new Error('stored NostrIdentity AppKey is not active in its roster');
+  const normalized = normalizeStoredNostrIdentitySession(stored);
+  const appKeySecretKey = decodeNsec(normalized.appKeyNsec, 'stored NostrIdentity AppKey');
+  const appKeyPubkey = getPublicKey(appKeySecretKey);
+  const appKeyNpub = nip19.npubEncode(appKeyPubkey);
+
+  if (normalized.status === 'pending_device_approval') {
+    const bootstrap = normalizeBootstrap(normalized.pendingDeviceApproval.bootstrap);
+    if (bootstrap.deviceAppKeyNpub !== appKeyNpub) {
+      throw new Error('stored device approval bootstrap AppKey mismatch');
     }
+    const requestSecretKey = decodeNsec(
+      normalized.pendingDeviceApproval.requestNsec,
+      'stored device approval request key',
+    );
+    if (nip19.npubEncode(getPublicKey(requestSecretKey)) !== bootstrap.requestNpub) {
+      throw new Error('stored device approval request key mismatch');
+    }
+    return {
+      appKeyPubkey,
+      appKeyNpub,
+      appKeyNsec: normalized.appKeyNsec,
+      status: normalized.status,
+      rosterOps: [],
+      createdAt: normalized.createdAt,
+      ...(bootstrap.label !== undefined ? { label: bootstrap.label } : {}),
+      pendingDeviceApproval: {
+        bootstrap,
+        requestNsec: normalized.pendingDeviceApproval.requestNsec,
+      },
+    };
+  }
+
+  const projection = projectNostrIdentityRoster(normalized.profileId, normalized.rosterOps);
+  if (!projection.active_facets[appKeyPubkey]) {
+    throw new Error('stored NostrIdentity AppKey is not active in its roster');
   }
   return {
-    profileId: stored.profileId,
+    profileId: normalized.profileId,
     appKeyPubkey,
-    appKeyNpub: nip19.npubEncode(appKeyPubkey),
-    appKeyNsec: stored.appKeyNsec,
-    status: stored.status,
-    rosterOps: stored.rosterOps,
-    createdAt: stored.createdAt,
-    ...(stored.label ? { label: stored.label } : {}),
-    ...(stored.pendingDeviceLink ? { pendingDeviceLink: stored.pendingDeviceLink } : {}),
+    appKeyNpub,
+    appKeyNsec: normalized.appKeyNsec,
+    status: normalized.status,
+    rosterOps: normalized.rosterOps,
+    createdAt: normalized.createdAt,
+    ...(normalized.label ? { label: normalized.label } : {}),
   };
 }
 
@@ -192,16 +291,7 @@ export function clearNostrIdentitySession(options: NostrIdentitySessionStoreOpti
 }
 
 export function parseStoredNostrIdentitySession(raw: string): StoredNostrIdentitySession {
-  const parsed = JSON.parse(raw) as Partial<StoredNostrIdentitySession>;
-  if (!parsed || parsed.schema !== 1) throw new Error('unsupported NostrIdentity session schema');
-  if (typeof parsed.profileId !== 'string') throw new Error('stored NostrIdentity session missing profile id');
-  if (typeof parsed.appKeyNsec !== 'string') throw new Error('stored NostrIdentity session missing AppKey secret');
-  if (parsed.status !== 'active' && parsed.status !== 'pending_device_link') {
-    throw new Error('stored NostrIdentity session has invalid status');
-  }
-  if (!Array.isArray(parsed.rosterOps)) throw new Error('stored NostrIdentity session missing roster ops');
-  if (typeof parsed.createdAt !== 'number') throw new Error('stored NostrIdentity session missing created timestamp');
-  return parsed as StoredNostrIdentitySession;
+  return normalizeStoredNostrIdentitySession(JSON.parse(raw) as unknown);
 }
 
 export function nostrIdentitySessionRosterEvents(session: NostrIdentitySession): Event[] {
@@ -215,6 +305,63 @@ export async function publishNostrIdentitySessionRosterEvents(
   for (const event of nostrIdentitySessionRosterEvents(session)) {
     await publish(event);
   }
+}
+
+function normalizeStoredNostrIdentitySession(value: unknown): StoredNostrIdentitySession {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('stored NostrIdentity session must be an object');
+  }
+  const stored = value as Record<string, unknown>;
+  if (stored.schema !== 2) throw new Error('unsupported NostrIdentity session schema');
+  if (stored.status === 'active') {
+    requireExactFields(stored, [
+      'schema', 'profileId', 'appKeyNsec', 'status', 'rosterOps', 'createdAt', 'label',
+    ], 'stored active NostrIdentity session');
+    if (typeof stored.profileId !== 'string') throw new Error('stored NostrIdentity session missing profile id');
+    if (typeof stored.appKeyNsec !== 'string') throw new Error('stored NostrIdentity session missing AppKey secret');
+    if (!Array.isArray(stored.rosterOps)) throw new Error('stored NostrIdentity session missing roster ops');
+    if (!Number.isInteger(stored.createdAt)) throw new Error('stored NostrIdentity session missing created timestamp');
+    if (stored.label !== undefined && typeof stored.label !== 'string') {
+      throw new Error('stored NostrIdentity session label must be a string');
+    }
+    return stored as unknown as StoredActiveNostrIdentitySession;
+  }
+  if (stored.status === 'pending_device_approval') {
+    requireExactFields(stored, [
+      'schema', 'appKeyNsec', 'status', 'createdAt', 'pendingDeviceApproval',
+    ], 'stored pending NostrIdentity session');
+    if (typeof stored.appKeyNsec !== 'string') throw new Error('stored NostrIdentity session missing AppKey secret');
+    if (!Number.isInteger(stored.createdAt)) throw new Error('stored NostrIdentity session missing created timestamp');
+    if (!stored.pendingDeviceApproval || typeof stored.pendingDeviceApproval !== 'object'
+      || Array.isArray(stored.pendingDeviceApproval)) {
+      throw new Error('stored NostrIdentity session missing device approval');
+    }
+    const pending = stored.pendingDeviceApproval as Record<string, unknown>;
+    requireExactFields(pending, ['bootstrap', 'requestNsec'], 'stored device approval');
+    if (typeof pending.requestNsec !== 'string') throw new Error('stored device approval missing request key');
+    normalizeBootstrap(pending.bootstrap);
+    return stored as unknown as StoredPendingNostrIdentitySession;
+  }
+  throw new Error('stored NostrIdentity session has invalid status');
+}
+
+function normalizeBootstrap(value: unknown): DeviceApprovalBootstrap {
+  const encoded = encodeDeviceApprovalBootstrap(value as DeviceApprovalBootstrap);
+  const bootstrap = parseDeviceApprovalBootstrap(encoded);
+  if (!bootstrap) throw new Error('invalid device approval bootstrap');
+  return bootstrap;
+}
+
+function decodeNsec(value: string, label: string): Uint8Array {
+  const decoded = nip19.decode(value);
+  if (decoded.type !== 'nsec') throw new Error(`${label} is not an nsec`);
+  return decoded.data as Uint8Array;
+}
+
+function requireExactFields(value: Record<string, unknown>, fields: string[], label: string): void {
+  const allowed = new Set(fields);
+  const unknown = Object.keys(value).find((field) => !allowed.has(field));
+  if (unknown !== undefined) throw new Error(`${label} has unknown field ${unknown}`);
 }
 
 function resolveSessionStorage(
@@ -248,6 +395,6 @@ function fallbackUuidV4(): string {
   }
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
