@@ -125,7 +125,6 @@ export function createLocalNostrIdentitySession(options: {
 export function createPendingDeviceApprovalSession(options: {
   appKeySecretKey?: Uint8Array;
   requestSecretKey?: Uint8Array;
-  requestSecret?: string;
   createdAt?: number;
   label?: string;
 } = {}): PendingNostrIdentitySession {
@@ -135,7 +134,6 @@ export function createPendingDeviceApprovalSession(options: {
   const local = createDeviceApprovalBootstrap({
     deviceAppKeySecretKey: appKeySecretKey,
     ...(options.requestSecretKey !== undefined ? { requestSecretKey: options.requestSecretKey } : {}),
-    ...(options.requestSecret !== undefined ? { requestSecret: options.requestSecret } : {}),
     ...(options.label !== undefined ? { label: options.label } : {}),
   });
 

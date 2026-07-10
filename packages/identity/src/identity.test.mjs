@@ -16,6 +16,7 @@ import {
   createNostrIdentitySignerFromSeedPhrase,
   createLocalNostrIdentitySession,
   createPendingDeviceApprovalSession,
+  DEVICE_APPROVAL_BOOTSTRAP_PREFIX,
   deviceApprovalBootstrapHasPrefix,
   encodeDeviceApprovalBootstrap,
   isCompleteDeviceApprovalBootstrapInput,
@@ -85,7 +86,6 @@ test('device approval QR is the approval input and only the receipt is transport
   const local = createDeviceApprovalBootstrap({
     deviceAppKeySecretKey: deviceSecret,
     requestSecretKey,
-    requestSecret: Buffer.alloc(32, 7).toString('base64url'),
     label: 'Phone',
   });
   const { bootstrap } = local;
@@ -158,6 +158,11 @@ test('device approval QR is the approval input and only the receipt is transport
 
 test('device approval bootstrap preserves separate stable and ephemeral npubs and a 32-byte secret', () => {
   const deviceSecret = generateSecretKey();
+  const suppliedSecret = Buffer.alloc(32, 7).toString('base64url');
+  assert.throws(() => createDeviceApprovalBootstrap({
+    deviceAppKeySecretKey: deviceSecret,
+    requestSecret: suppliedSecret,
+  }), /unknown option requestSecret/);
   const local = createDeviceApprovalBootstrap({
     deviceAppKeySecretKey: deviceSecret,
   });
@@ -171,6 +176,10 @@ test('device approval bootstrap preserves separate stable and ephemeral npubs an
   assert.match(parsed?.requestSecret, /^[A-Za-z0-9_-]{43}$/u);
   assert.equal(Buffer.from(parsed.requestSecret, 'base64url').length, 32);
   assert.notEqual(parsed.requestSecret, Buffer.from(requestSecretKey).toString('hex'));
+  assert.throws(() => createDeviceApprovalBootstrap({
+    deviceAppKeySecretKey: deviceSecret,
+    requestSecretKey: deviceSecret,
+  }), /stable and ephemeral keys must be distinct/);
 });
 
 test('device approval bootstrap parser rejects extras and legacy link shapes', () => {
@@ -199,6 +208,9 @@ test('device approval bootstrap parser rejects extras and legacy link shapes', (
     requestSecret: Buffer.alloc(31, 1).toString('base64url'),
   })), null);
   assert.equal(parseDeviceApprovalBootstrap(`${encodeDeviceApprovalBootstrap(bootstrap)}?relay=wss://example.com`), null);
+  const payload = encodeDeviceApprovalBootstrap(bootstrap).slice(DEVICE_APPROVAL_BOOTSTRAP_PREFIX.length);
+  assert.equal(parseDeviceApprovalBootstrap(`nostr-identity://device-approval/${payload}`), null);
+  assert.equal(deviceApprovalBootstrapHasPrefix(`nostr-identity://device-approval/${payload}`), false);
   assert.equal(parseDeviceApprovalBootstrap('https://drive.iris.to/invite/legacy'), null);
   assert.equal(parseDeviceApprovalBootstrap('iris-drive://invite/legacy'), null);
   assert.equal(parseDeviceApprovalBootstrap('https://drive.iris.to/approve-device?legacy=1'), null);
@@ -912,7 +924,6 @@ test('pending device approval session stores only local bootstrap material and c
   const session = createPendingDeviceApprovalSession({
     appKeySecretKey: generateSecretKey(),
     requestSecretKey: generateSecretKey(),
-    requestSecret: Buffer.alloc(32, 12).toString('base64url'),
     createdAt: 43,
     label: 'New browser',
   });

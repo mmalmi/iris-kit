@@ -1,7 +1,6 @@
 import {
   APP_KEY_WRITER_CAPABILITIES,
   FACT_OP_KIND,
-  NOSTR_IDENTITY_DEVICE_APPROVAL_BOOTSTRAP_PREFIX,
   NOSTR_IDENTITY_DEVICE_APPROVAL_RECEIPT_SCHEMA,
   NOSTR_IDENTITY_DEVICE_APPROVAL_RECEIPT_TYPE,
   createAddAppKeyRosterOp,
@@ -22,11 +21,13 @@ import {
 } from 'nostr-social-graph';
 import { finalizeEvent, generateSecretKey, getPublicKey, nip44, type Event } from 'nostr-tools';
 
-export * from 'nostr-social-graph';
-
 export const DEVICE_APPROVAL_BOOTSTRAP_PREFIX = 'https://drive.iris.to/approve-device/';
 export const NOSTR_IDENTITY_DEVICE_APPROVAL_BOOTSTRAP_MAX_URI_LENGTH = 384;
 export const NOSTR_IDENTITY_DEVICE_APPROVAL_LABEL_MAX_BYTES = 16;
+export {
+  NOSTR_IDENTITY_DEVICE_APPROVAL_RECEIPT_SCHEMA,
+  NOSTR_IDENTITY_DEVICE_APPROVAL_RECEIPT_TYPE,
+};
 
 export interface DeviceApprovalBootstrap {
   deviceAppKeyNpub: string;
@@ -48,13 +49,22 @@ const DEVICE_APPROVAL_BOOTSTRAP_FIELDS = new Set([
   'requestSecret',
   'label',
 ]);
+const DEVICE_APPROVAL_BOOTSTRAP_OPTION_FIELDS = new Set([
+  'deviceAppKeySecretKey',
+  'requestSecretKey',
+  'label',
+]);
 
 export function createDeviceApprovalBootstrap(options: {
   deviceAppKeySecretKey: Uint8Array;
   requestSecretKey?: Uint8Array;
-  requestSecret?: string;
   label?: string;
 }): LocalDeviceApprovalBootstrap {
+  const unknownOption = Object.keys(options)
+    .find((field) => !DEVICE_APPROVAL_BOOTSTRAP_OPTION_FIELDS.has(field));
+  if (unknownOption !== undefined) {
+    throw new Error(`device approval bootstrap has unknown option ${unknownOption}`);
+  }
   const deviceAppKeyPubkey = getPublicKey(options.deviceAppKeySecretKey);
   const requestSecretKey = options.requestSecretKey ?? generateSecretKey();
   const requestPubkey = getPublicKey(requestSecretKey);
@@ -65,7 +75,7 @@ export function createDeviceApprovalBootstrap(options: {
     bootstrap: normalizeDeviceApprovalBootstrap({
       deviceAppKeyNpub: pubkeyToNpub(deviceAppKeyPubkey),
       requestNpub: pubkeyToNpub(requestPubkey),
-      requestSecret: options.requestSecret ?? base64UrlEncode(generateSecretKey()),
+      requestSecret: base64UrlEncode(generateSecretKey()),
       ...(options.label !== undefined ? { label: options.label } : {}),
     }),
     requestSecretKey,
@@ -237,10 +247,8 @@ function normalizeDeviceApprovalBootstrap(value: unknown): DeviceApprovalBootstr
 
 function strictBootstrapPayload(input: string): string | null {
   const value = input.trim();
-  const prefix = [DEVICE_APPROVAL_BOOTSTRAP_PREFIX, NOSTR_IDENTITY_DEVICE_APPROVAL_BOOTSTRAP_PREFIX]
-    .find((candidate) => value.startsWith(candidate));
-  if (prefix === undefined) return null;
-  const payload = value.slice(prefix.length);
+  if (!value.startsWith(DEVICE_APPROVAL_BOOTSTRAP_PREFIX)) return null;
+  const payload = value.slice(DEVICE_APPROVAL_BOOTSTRAP_PREFIX.length);
   if (!payload || payload.includes('?') || payload.includes('#')) return null;
   return payload;
 }
