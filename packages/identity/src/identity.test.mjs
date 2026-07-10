@@ -30,6 +30,8 @@ import {
   parseDeviceLinkInvite,
   clearNostrIdentitySession,
   loadNostrIdentitySession,
+  nostrIdentityDeviceApprovalRelayResource,
+  nostrIdentityDeviceApprovalRequestRelays,
   nostrIdentitySessionRosterEvents,
   projectNostrIdentityRoster,
   publishNostrIdentitySessionRosterEvents,
@@ -228,6 +230,25 @@ test('device approval request generator uses separate base64url secret and reque
   assert.equal(parsed?.requestPubkey, request.requestPubkey);
   assert.equal(parsed?.requestSecret, request.requestSecret);
   assert.equal(parsed?.deviceAppKeyPubkey, request.deviceAppKeyPubkey);
+});
+
+test('device approval request relay resources round trip through the signed proof', () => {
+  const relayUrl = 'wss://temp.iris.to';
+  const relayResource = nostrIdentityDeviceApprovalRelayResource(relayUrl);
+  const request = createDeviceApprovalRequest({
+    deviceAppKeySecretKey: generateSecretKey(),
+    requestedAt: 1_700_000_100,
+    resources: [relayResource],
+  });
+  const parsed = parseDeviceApprovalRequest(encodeDeviceApprovalRequest(request));
+
+  assert.deepEqual(relayResource, {
+    type: 'nostr_relay',
+    id: relayUrl,
+    scopes: ['device_approval'],
+  });
+  assert.ok(parsed);
+  assert.deepEqual(nostrIdentityDeviceApprovalRequestRelays(parsed), [relayUrl]);
 });
 
 test('admin approval projects the requested device as an AppKey facet', () => {

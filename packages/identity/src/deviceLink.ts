@@ -10,6 +10,8 @@ import {
   createNostrIdentityDeviceApprovalRequest,
   encodeNostrIdentityDeviceApprovalRequest,
   parseNostrIdentityDeviceApprovalRequest,
+  nostrIdentityDeviceApprovalRelayResource,
+  nostrIdentityDeviceApprovalRequestRelays,
   approveNostrIdentityDeviceApprovalRequest,
   buildNostrIdentityDeviceApprovalReceiptEvent,
   parseNostrIdentityDeviceApprovalReceiptEvent as parseSharedNostrIdentityDeviceApprovalReceiptEvent,
@@ -54,6 +56,10 @@ export const signDeviceLinkRequestEvent = signNostrIdentityDeviceLinkRequestEven
 export const parseDeviceLinkRequestEvent = parseNostrIdentityDeviceLinkRequestEvent;
 export const approveDeviceLinkRequest = approveNostrIdentityDeviceLinkRequest;
 export const createDeviceApprovalRequest = createNostrIdentityDeviceApprovalRequest;
+export {
+  nostrIdentityDeviceApprovalRelayResource,
+  nostrIdentityDeviceApprovalRequestRelays,
+};
 export const approveDeviceApprovalRequest = approveNostrIdentityDeviceApprovalRequest;
 export const buildDeviceApprovalReceiptEvent = buildNostrIdentityDeviceApprovalReceiptEvent;
 export const parseDeviceApprovalReceiptRosterOp = parseNostrIdentityDeviceApprovalReceiptRosterOp;
