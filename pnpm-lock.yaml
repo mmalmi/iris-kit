@@ -107,6 +107,22 @@ importers:
         specifier: ^4.1.2
         version: 4.1.8(@types/node@22.19.21)(vite@8.0.16(@types/node@22.19.21)(esbuild@0.27.7))
 
+  packages/nostr-pubsub:
+    dependencies:
+      nostr-pubsub:
+        specifier: link:../../../nostr-pubsub/ts/packages/nostr-pubsub
+        version: link:../../../nostr-pubsub/ts/packages/nostr-pubsub
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.8
+        version: 22.19.21
+      nostr-tools:
+        specifier: 2.23.5
+        version: 2.23.5(typescript@5.9.3)
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
   packages/release-tools: {}
 
   packages/svelte-ui:

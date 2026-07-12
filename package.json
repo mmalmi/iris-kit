@@ -10,6 +10,6 @@
   },
   "packageManager": "pnpm@10.24.0",
   "scripts": {
-    "test": "pnpm --filter @iris/identity test && pnpm --filter @iris/svelte-ui test && pnpm --filter @iris/hashtree-app test"
+    "test": "pnpm --filter @iris/identity test && pnpm --filter @iris/svelte-ui test && pnpm --filter @iris/hashtree-app test && pnpm --filter @iris/nostr-pubsub test"
   }
 }
