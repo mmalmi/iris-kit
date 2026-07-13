@@ -65,26 +65,15 @@ export function createNostrIdentitySignerFromSeedPhrase(options: {
 }
 
 export function createNostrIdentitySignerFromNip07(nostr: Nip07LikeSigner): NostrIdentityEventSigner {
-  return {
+  return createNostrIdentitySignerFromCustom({
     method: 'nip07',
     getPublicKey: () => nostr.getPublicKey(),
-    signEvent: async (draft) => {
-      const expectedPubkey = await nostr.getPublicKey();
-      const signed = await nostr.signEvent(cloneDraft(draft));
-      validateSignedDraft(signed, draft, expectedPubkey);
-      return signed;
-    },
+    signEvent: (draft) => nostr.signEvent(draft),
     ...(nostr.nip44 ? {
-      nip44Encrypt: (recipientPubkey, plaintext) => nostr.nip44!.encrypt(
-        requireHexPubkey(recipientPubkey, 'recipient'),
-        plaintext,
-      ),
-      nip44Decrypt: (senderPubkey, ciphertext) => nostr.nip44!.decrypt(
-        requireHexPubkey(senderPubkey, 'sender'),
-        ciphertext,
-      ),
+      nip44Encrypt: (recipientPubkey, plaintext) => nostr.nip44!.encrypt(recipientPubkey, plaintext),
+      nip44Decrypt: (senderPubkey, ciphertext) => nostr.nip44!.decrypt(senderPubkey, ciphertext),
     } : {}),
-  };
+  });
 }
 
 export function createNostrIdentitySignerFromNip46(signer: Nip46LikeSigner): NostrIdentityEventSigner {
@@ -93,16 +82,10 @@ export function createNostrIdentitySignerFromNip46(signer: Nip46LikeSigner): Nos
     getPublicKey: () => signer.getPublicKey(),
     signEvent: (draft) => signer.signEvent(draft),
     ...(signer.nip44Encrypt ? {
-      nip44Encrypt: (recipientPubkey, plaintext) => signer.nip44Encrypt!(
-        requireHexPubkey(recipientPubkey, 'recipient'),
-        plaintext,
-      ),
+      nip44Encrypt: (recipientPubkey, plaintext) => signer.nip44Encrypt!(recipientPubkey, plaintext),
     } : {}),
     ...(signer.nip44Decrypt ? {
-      nip44Decrypt: (senderPubkey, ciphertext) => signer.nip44Decrypt!(
-        requireHexPubkey(senderPubkey, 'sender'),
-        ciphertext,
-      ),
+      nip44Decrypt: (senderPubkey, ciphertext) => signer.nip44Decrypt!(senderPubkey, ciphertext),
     } : {}),
   });
 }

@@ -19,6 +19,7 @@ import {
   parseNostrIdentityRosterOpEvent,
   signNostrIdentityFacetAcceptance,
 } from './profileEvents.ts';
+import { currentUnixSeconds } from './profileJson.ts';
 import type { Awaitable, NostrIdentityEventSigner } from './signers.ts';
 
 export interface NostrIdentityAppKeySecretRewrapContext {
@@ -80,14 +81,19 @@ export async function attachNostrAppKeyToIdentity(
   const appKeySecretKey = options.appKeySecretKey ?? generateSecretKey();
   const appKeyPubkey = getPublicKey(appKeySecretKey);
   const appKeyNpub = nip19.npubEncode(appKeyPubkey);
-  const signerPubkey = await normalizedSignerPubkey(options.signer);
+  const signerPubkey = normalizeHexPubkey(await options.signer.getPublicKey());
+  if (!signerPubkey) throw new Error('identity signer pubkey must be 64-char hex');
   const existingRosterOps = options.rosterOps?.slice() ?? [];
   const projectedRoster = existingRosterOps.length
     ? projectNostrIdentityRoster(options.profileId, existingRosterOps)
     : undefined;
 
-  if (options.requireSignerAuthorization !== false && projectedRoster) {
-    requireSignerCanAttachAppKey(projectedRoster, signerPubkey);
+  if (
+    options.requireSignerAuthorization !== false
+    && projectedRoster
+    && !signerCanAttachAppKey(projectedRoster, signerPubkey)
+  ) {
+    throw new Error('identity signer is not authorized to attach AppKeys');
   }
 
   const createdAt = options.createdAt ?? currentUnixSeconds();
@@ -117,7 +123,7 @@ export async function attachNostrAppKeyToIdentity(
     acceptedAt: createdAt,
     clientNonce: `${rosterOp.content.client_nonce}:accept`,
   });
-  const rewrapResults = await runRewrapHook(options.rewrapSecrets, {
+  const rewrapResult = await options.rewrapSecrets?.({
     profileId: options.profileId,
     appKeyPubkey,
     appKeyNpub,
@@ -136,7 +142,7 @@ export async function attachNostrAppKeyToIdentity(
     addedByPubkey: signerPubkey,
     rosterOp,
     facetAcceptance,
-    rewrapResults,
+    rewrapResults: Array.isArray(rewrapResult) ? rewrapResult : [],
   };
 }
 
@@ -167,36 +173,4 @@ export function signerCanAttachAppKey(
   if (!normalized) return false;
   const capabilities = projection.active_facets[normalized]?.capabilities;
   return Boolean(capabilities?.can_admin_profile || capabilities?.can_recover_app_keys);
-}
-
-export function noopNostrIdentityAppKeySecretRewrap(): NostrIdentityAppKeySecretRewrapResult[] {
-  return [];
-}
-
-function requireSignerCanAttachAppKey(
-  projection: NostrIdentityRosterProjection,
-  signerPubkey: string,
-): void {
-  if (!signerCanAttachAppKey(projection, signerPubkey)) {
-    throw new Error('identity signer is not authorized to attach AppKeys');
-  }
-}
-
-async function normalizedSignerPubkey(signer: NostrIdentityEventSigner): Promise<string> {
-  const pubkey = normalizeHexPubkey(await signer.getPublicKey());
-  if (!pubkey) throw new Error('identity signer pubkey must be 64-char hex');
-  return pubkey;
-}
-
-async function runRewrapHook(
-  hook: NostrIdentityAppKeySecretRewrapHook | undefined,
-  context: NostrIdentityAppKeySecretRewrapContext,
-): Promise<NostrIdentityAppKeySecretRewrapResult[]> {
-  if (!hook) return [];
-  const result = await hook(context);
-  return Array.isArray(result) ? result : [];
-}
-
-function currentUnixSeconds(): number {
-  return Math.floor(Date.now() / 1000);
 }

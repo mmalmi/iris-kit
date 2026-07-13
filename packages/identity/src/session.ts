@@ -14,6 +14,7 @@ import {
 } from './profile.ts';
 import { projectNostrIdentityRoster } from './profileProjection.ts';
 import { signNostrIdentityRosterOp } from './profileEvents.ts';
+import { currentUnixSeconds, randomClientNonce } from './profileJson.ts';
 
 export type NostrIdentitySessionStatus = 'active' | 'pending_device_approval';
 
@@ -371,14 +372,6 @@ function resolveSessionStorage(
   } catch {
     return null;
   }
-}
-
-function currentUnixSeconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
-function randomClientNonce(): string {
-  return globalThis.crypto?.randomUUID?.() ?? `nonce-${Math.random().toString(36).slice(2)}`;
 }
 
 function randomProfileId(): NostrIdentityId {

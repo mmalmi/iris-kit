@@ -53,13 +53,18 @@ export interface RemoveNostrAppKeyResult {
 export async function removeNostrAppKeyFromIdentity(
   options: RemoveNostrAppKeyOptions,
 ): Promise<RemoveNostrAppKeyResult> {
-  const appKeyPubkey = requireHexPubkey(options.appKeyPubkey, 'AppKey');
-  const signerPubkey = await normalizedSignerPubkey(options.signer);
+  const appKeyPubkey = normalizeHexPubkey(options.appKeyPubkey);
+  if (!appKeyPubkey) throw new Error('AppKey pubkey must be 64-char hex');
+  const signerPubkey = normalizeHexPubkey(await options.signer.getPublicKey());
+  if (!signerPubkey) throw new Error('identity signer pubkey must be 64-char hex');
   const existingRosterOps = options.rosterOps.slice();
   const existingProjection = projectNostrIdentityRoster(options.profileId, existingRosterOps);
 
-  if (options.requireSignerAuthorization !== false) {
-    requireSignerCanRemoveAppKey(existingProjection, signerPubkey, appKeyPubkey);
+  if (
+    options.requireSignerAuthorization !== false
+    && !signerCanRemoveAppKey(existingProjection, signerPubkey, appKeyPubkey)
+  ) {
+    throw new Error('identity signer is not authorized to remove this AppKey');
   }
 
   const draft = buildNostrIdentityRosterOpEventDraft({
@@ -80,7 +85,7 @@ export async function removeNostrAppKeyFromIdentity(
     ...existingRosterOps,
     rosterOp,
   ]);
-  const rewrapResults = await runRemovalHook(options.rewrapSecrets, {
+  const rewrapResult = await options.rewrapSecrets?.({
     profileId: options.profileId,
     appKeyPubkey,
     removedByPubkey: signerPubkey,
@@ -94,7 +99,7 @@ export async function removeNostrAppKeyFromIdentity(
     appKeyPubkey,
     removedByPubkey: signerPubkey,
     rosterOp,
-    rewrapResults,
+    rewrapResults: Array.isArray(rewrapResult) ? rewrapResult : [],
     projectedRoster,
   };
 }
@@ -125,33 +130,4 @@ export function signerCanRemoveAppKey(
   }
 
   return true;
-}
-
-function requireSignerCanRemoveAppKey(
-  projection: NostrIdentityRosterProjection,
-  signerPubkey: string,
-  appKeyPubkey: string,
-): void {
-  if (!signerCanRemoveAppKey(projection, signerPubkey, appKeyPubkey)) {
-    throw new Error('identity signer is not authorized to remove this AppKey');
-  }
-}
-
-async function normalizedSignerPubkey(signer: NostrIdentityEventSigner): Promise<string> {
-  return requireHexPubkey(await signer.getPublicKey(), 'identity signer');
-}
-
-function requireHexPubkey(value: string, label: string): string {
-  const normalized = normalizeHexPubkey(value);
-  if (!normalized) throw new Error(`${label} pubkey must be 64-char hex`);
-  return normalized;
-}
-
-async function runRemovalHook(
-  hook: NostrIdentityAppKeySecretRemovalHook | undefined,
-  context: NostrIdentityAppKeyRemovalContext,
-): Promise<NostrIdentityAppKeySecretRewrapResult[]> {
-  if (!hook) return [];
-  const result = await hook(context);
-  return Array.isArray(result) ? result : [];
 }
