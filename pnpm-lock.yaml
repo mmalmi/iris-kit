@@ -889,7 +889,7 @@ packages:
 
   nostr-pubsub@https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.4/nostr-pubsub-0.1.4.tgz:
     resolution: {tarball: https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.4/nostr-pubsub-0.1.4.tgz}
-    version: 0.1.3
+    version: 0.1.4
     peerDependencies:
       nostr-tools: '>=2.17.0 <3'
 
