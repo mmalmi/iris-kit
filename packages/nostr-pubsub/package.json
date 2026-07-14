@@ -19,7 +19,7 @@
     "test": "pnpm check && node --test src/*.test.mjs"
   },
   "dependencies": {
-    "nostr-pubsub": "https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.3/nostr-pubsub-0.1.3.tgz"
+    "nostr-pubsub": "https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.4/nostr-pubsub-0.1.4.tgz"
   },
   "peerDependencies": {
     "nostr-tools": ">=2.17.0 <3"
