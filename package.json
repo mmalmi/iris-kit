@@ -10,6 +10,7 @@
   },
   "packageManager": "pnpm@10.24.0",
   "scripts": {
-    "test": "pnpm --filter @iris/identity test && pnpm --filter @iris/svelte-ui test && pnpm --filter @iris/hashtree-app test && pnpm --filter @iris/nostr-pubsub test"
+    "test": "pnpm verify:dependency-lock && pnpm --filter @iris/identity test && pnpm --filter @iris/svelte-ui test && pnpm --filter @iris/hashtree-app test && pnpm --filter @iris/nostr-pubsub test",
+    "verify:dependency-lock": "node scripts/verify-dependency-lock.mjs"
   }
 }

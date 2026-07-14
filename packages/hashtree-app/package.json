@@ -64,5 +64,8 @@
   "peerDependencies": {
     "@hashtree/core": "0.1.8",
     "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@hashtree/core": "https://github.com/mmalmi/hashtree/releases/download/hashtree-core-ts-v0.1.8/hashtree-core-0.1.8.tgz"
   }
 }

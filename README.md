@@ -19,3 +19,6 @@ App-specific routing, profile fetching, badges, media behavior, and release scri
 ```bash
 pnpm test
 ```
+
+The test gate also checks that GitHub-hosted package archives retain their
+pinned URLs and SHA-512 integrity hashes in `pnpm-lock.yaml`.
