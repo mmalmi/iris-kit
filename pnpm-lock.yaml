@@ -110,8 +110,8 @@ importers:
   packages/nostr-pubsub:
     dependencies:
       nostr-pubsub:
-        specifier: link:../../../nostr-pubsub/ts/packages/nostr-pubsub
-        version: link:../../../nostr-pubsub/ts/packages/nostr-pubsub
+        specifier: https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.3/nostr-pubsub-0.1.3.tgz
+        version: https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.3/nostr-pubsub-0.1.3.tgz(nostr-tools@2.23.5(typescript@5.9.3))
     devDependencies:
       '@types/node':
         specifier: ^22.19.8
@@ -886,6 +886,12 @@ packages:
     resolution: {integrity: sha512-ZB9RH/39qpq5Vu6Y+NmUaFhQR6pp+M2Xt76XBnEwDaGcVAqhlvxrl3B2bKS5D3NH3QR76v3aSrKaF/Kiy7lEtQ==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
+
+  nostr-pubsub@https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.3/nostr-pubsub-0.1.3.tgz:
+    resolution: {tarball: https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.3/nostr-pubsub-0.1.3.tgz}
+    version: 0.1.3
+    peerDependencies:
+      nostr-tools: '>=2.17.0 <3'
 
   nostr-tools@2.23.3:
     resolution: {integrity: sha512-AALyt9k8xPdF4UV2mlLJ2mgCn4kpTB0DZ8t2r6wjdUh6anfx2cTVBsHUlo9U0EY/cKC5wcNyiMAmRJV5OVEalA==}
@@ -1723,6 +1729,10 @@ snapshots:
       thenify-all: 1.6.0
 
   nanoid@3.3.12: {}
+
+  nostr-pubsub@https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.3/nostr-pubsub-0.1.3.tgz(nostr-tools@2.23.5(typescript@5.9.3)):
+    dependencies:
+      nostr-tools: 2.23.5(typescript@5.9.3)
 
   nostr-tools@2.23.3(typescript@5.9.3):
     dependencies:
