@@ -13,13 +13,23 @@ const dependencies = [
     integrity:
       "sha512-+V3kHSyDe9Wmdnhew+1JGFUoGELLmFPXXvXtjIcNPVGsn/hYAWIXINPQrSRI2DYer8Uy5One7LLfzn0XMssC5w==",
   },
+  {
+    packageName: "nostr-pubsub",
+    consumer: "@iris/nostr-pubsub",
+    consumerManifest: "packages/nostr-pubsub/package.json",
+    url: "https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.4/nostr-pubsub-0.1.4.tgz",
+    integrity:
+      "sha512-Rm0e+UC1YBnjPjgHED0t+S6+ytUjz9l1ld1AiFiilpC2OU1HDZxtUUrJTjupoe97v6NUUhywkoNNLrZ9LHB9HA==",
+  },
 ];
 
 for (const dependency of dependencies) {
   const consumer = JSON.parse(
     await readFile(new URL(dependency.consumerManifest, root), "utf8"),
   );
-  const declared = consumer.devDependencies?.[dependency.packageName];
+  const declared =
+    consumer.dependencies?.[dependency.packageName]
+    ?? consumer.devDependencies?.[dependency.packageName];
   if (declared !== dependency.url) {
     throw new Error(
       `${dependency.consumer} must load ${dependency.packageName} from ${dependency.url}`,
@@ -38,4 +48,4 @@ if (manifest.scripts?.test?.startsWith("pnpm verify:dependency-lock") !== true) 
   throw new Error("The normal test gate must verify GitHub dependency integrity");
 }
 
-console.log(`Verified ${dependencies.length} GitHub dependency lock entry`);
+console.log(`Verified ${dependencies.length} GitHub dependency lock entries`);
