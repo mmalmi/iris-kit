@@ -182,6 +182,9 @@ export class IrisFipsPubsub {
         });
         framesSent += 1;
       } catch (error) {
+        if (action.message.type === 'want') {
+          this.mesh.recordTransportDisruption(peerId, action.message.eventId);
+        }
         this.reportError(error, { operation: 'send', peerId });
         throw error;
       }

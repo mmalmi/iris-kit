@@ -115,3 +115,42 @@ test('multiplexes protocols and enforces explicit kind admission', async () => {
   board.close();
   await assert.rejects(() => chat.publish(signedEvent(1)), /closed/);
 });
+
+test('records a failed upstream WANT as a local transport disruption', async () => {
+  let receiveEndpointData;
+  const errors = [];
+  const adapter = createIrisFipsPubsub({
+    endpoint: {
+      async sendEndpointData() {
+        throw new Error('local FIPS stream failed');
+      },
+      on(event, listener) {
+        assert.equal(event, 'endpointData');
+        receiveEndpointData = listener;
+        return () => {};
+      },
+    },
+    peers: () => [PEER_B],
+    protocol: 'iris.test.messages',
+    allowedKinds: new Set([30_078]),
+    onError: (error, context) => errors.push([error, context]),
+  });
+  const event = signedEvent();
+
+  receiveEndpointData({
+    src: PEER_B,
+    dst: PEER_A,
+    payload: adapter.codec.encode({
+      type: 'inventory',
+      eventId: event.id,
+      eventKind: event.kind,
+      payloadBytes: 512,
+      hopLimit: 4,
+    }),
+  });
+  await adapter.idle();
+
+  assert.ok(errors.some(([, context]) => context.operation === 'send'));
+  assert.equal(adapter.mesh.retainedState().transportDisruptedRoutePeers, 1);
+  adapter.close();
+});
