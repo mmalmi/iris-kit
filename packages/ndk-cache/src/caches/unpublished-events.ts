@@ -1,5 +1,5 @@
 import { NDKEvent, type NDKEventId, type NDKRelay } from "ndk";
-import type debug from "debug";
+import type { Debugger } from "debug";
 import type { Table } from "dexie";
 import type { LRUCache } from "typescript-lru-cache";
 import type NDKCacheAdapterDexie from "..";
@@ -20,7 +20,7 @@ export async function unpublishedEventsWarmUp(
     });
 }
 
-export function unpublishedEventsDump(unpublishedEvents: Table<UnpublishedEvent>, debug: debug.IDebugger) {
+export function unpublishedEventsDump(unpublishedEvents: Table<UnpublishedEvent>, debug: Debugger) {
     return async (dirtyKeys: Set<string>, cache: LRUCache<NDKEventId, UnpublishedEvent>) => {
         const entries: UnpublishedEvent[] = [];
 

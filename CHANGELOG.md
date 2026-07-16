@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## Runtime 0.2.2 - 2026-07-16
+
+- Corrected `ndk@0.2.1` declaration generation so its public NIP utility and
+  debug types compile without declaration implementations or undeclared names.
+- Published `ndk-cache@0.2.1` against the corrected immutable NDK artifact and
+  added a cold ESM/NodeNext/strict TypeScript consumer to the normal test gate.
+- Updated `@iris/release-tools@0.1.1` to recover from status-zero Hashtree
+  file-server upload failures with one forced nhash push and fail closed if the
+  retry still reports errors.
+
 ## Runtime 0.2.1 - 2026-07-16
 
 - Corrected the `@iris/svelte-ui@0.1.1` root type barrel and added a TypeScript

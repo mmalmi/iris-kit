@@ -1,4 +1,5 @@
 import { EventEmitter } from "tseep";
+import type { Debugger } from "debug";
 import type { NostrEvent } from "../../events";
 import { NDKEvent } from "../../events";
 import { NDKKind } from "../../events/kinds";
@@ -28,11 +29,11 @@ export class NDKNostrRpc extends EventEmitter {
     private ndk: NDK;
     private signer: NDKSigner;
     private relaySet: NDKRelaySet | undefined;
-    private debug: debug.Debugger;
+    private debug: Debugger;
     public encryptionType: "nip04" | "nip44" = "nip44";
     private pool: NDKPool | undefined;
 
-    public constructor(ndk: NDK, signer: NDKSigner, debug: debug.Debugger, relayUrls?: string[]) {
+    public constructor(ndk: NDK, signer: NDKSigner, debug: Debugger, relayUrls?: string[]) {
         super();
         this.ndk = ndk;
         this.signer = signer;

@@ -1,6 +1,6 @@
 {
   "name": "@iris/release-tools",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -9,6 +9,9 @@
     ".": "./src/release.mjs"
   },
   "files": [
-    "src"
-  ]
+    "src/release.mjs"
+  ],
+  "scripts": {
+    "test": "node --test src/*.test.mjs"
+  }
 }

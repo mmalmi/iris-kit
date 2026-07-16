@@ -1,4 +1,4 @@
-import type debug from "debug";
+import type { Debugger } from "debug";
 import type { NostrEvent } from "../events/index.js";
 import { NDKEvent } from "../events/index.js";
 import { NDKKind } from "../events/kinds";
@@ -36,7 +36,7 @@ export class NDKRelayConnectivity {
         success: 0,
         durations: [],
     };
-    private debug: debug.Debugger;
+    private debug: Debugger;
     public netDebug?: NDKNetDebug;
     private connectTimeout: ReturnType<typeof setTimeout> | undefined;
     private reconnectTimeout: ReturnType<typeof setTimeout> | undefined;

@@ -1,4 +1,4 @@
-import debug from "debug";
+import debug, { type Debugger } from "debug";
 import type { NDK } from "../../../ndk";
 import { NDKUser } from "../../../user";
 import type { NostrEvent } from "../..";
@@ -19,7 +19,7 @@ type ValidPeriod = { start: Date; end: Date };
  * event.subscriber = subscriber;
  */
 export class NDKSubscriptionReceipt extends NDKEvent {
-    private debug: debug.Debugger;
+    private debug: Debugger;
     static kind = NDKKind.SubscriptionReceipt;
     static kinds = [NDKKind.SubscriptionReceipt];
 

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const destination = resolve(process.argv[2] ?? join(root, 'dist-runtime'));
-const packages = [
+const runtimePackages = [
   { dir: 'ndk', build: true },
   { dir: 'ndk-cache', build: true },
   { dir: 'identity' },
@@ -13,6 +13,16 @@ const packages = [
   { dir: 'svelte-ui' },
   { dir: 'release-tools' },
 ];
+const requested = new Set(process.argv.slice(3));
+const packages = requested.size === 0
+  ? runtimePackages
+  : runtimePackages.filter(({ dir }) => requested.has(dir));
+
+if (packages.length !== requested.size) {
+  const known = new Set(runtimePackages.map(({ dir }) => dir));
+  const unknown = [...requested].filter((name) => !known.has(name));
+  throw new Error(`Unknown runtime package${unknown.length === 1 ? '' : 's'}: ${unknown.join(', ')}`);
+}
 
 rmSync(destination, { recursive: true, force: true });
 mkdirSync(destination, { recursive: true });

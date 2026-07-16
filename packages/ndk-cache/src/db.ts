@@ -1,5 +1,5 @@
 import type { NDKEventId, NDKRawEvent, NDKRelayInformation, NDKUserProfile } from "ndk";
-import Dexie, { type Table } from "dexie";
+import { Dexie, type Table } from "dexie";
 
 export interface Profile extends NDKUserProfile {
     pubkey: string;

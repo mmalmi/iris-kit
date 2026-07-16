@@ -1,3 +1,4 @@
+import type { Debugger } from "debug";
 import type { NDKAggregatedCountResult, NDKCountOptions, NDKCountResult } from "../../count/index.js";
 import { NDKCountHll } from "../../count/index.js";
 import type { NDKEvent } from "../../events/index.js";
@@ -50,7 +51,7 @@ export class NDKPublishError extends Error {
  */
 export class NDKRelaySet {
     readonly relays: Set<NDKRelay>;
-    private debug: debug.Debugger;
+    private debug: Debugger;
     private ndk: NDK;
     private pool: NDKPool;
 

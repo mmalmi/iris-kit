@@ -1,4 +1,4 @@
-import createDebug from "debug";
+import createDebug, { type Debugger } from "debug";
 import { NDKEvent } from "../events/index.js";
 import { NDKKind } from "../events/kinds/index.js";
 import type { NDK } from "../ndk/index.js";
@@ -18,7 +18,7 @@ type NDKAuthPolicy = (relay: NDKRelay, challenge: string) => Promise<boolean | u
 /**
  * This policy will disconnect from relays that request authentication.
  */
-function disconnect(pool: NDKPool, debug?: debug.Debugger) {
+function disconnect(pool: NDKPool, debug?: Debugger) {
     debug ??= createDebug("ndk:relay:auth-policies:disconnect");
 
     return async (relay: NDKRelay) => {
@@ -31,14 +31,14 @@ function disconnect(pool: NDKPool, debug?: debug.Debugger) {
 type ISignIn = {
     ndk?: NDK;
     signer?: NDKSigner;
-    debug?: debug.Debugger;
+    debug?: Debugger;
 };
 
 async function signAndAuth(
     event: NDKEvent,
     relay: NDKRelay,
     signer: NDKSigner,
-    debug: debug.Debugger,
+    debug: Debugger,
     resolve: (event: NDKEvent) => void,
     reject: (event: NDKEvent) => void,
 ) {

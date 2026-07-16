@@ -20,4 +20,6 @@ pnpm test
 ```
 
 The test gate also checks that GitHub-hosted package archives retain their
-pinned URLs and SHA-512 integrity hashes in `pnpm-lock.yaml`.
+pinned URLs and SHA-512 integrity hashes in `pnpm-lock.yaml`. NDK and its cache
+are packed, installed into an isolated ESM project, compiled with NodeNext,
+`strict`, and `skipLibCheck: false`, then loaded by Node.js.

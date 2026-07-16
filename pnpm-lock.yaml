@@ -42,6 +42,9 @@ importers:
       '@scure/base':
         specifier: 2.0.0
         version: 2.0.0
+      '@types/debug':
+        specifier: 4.1.13
+        version: 4.1.13
       debug:
         specifier: 4.4.3
         version: 4.4.3
@@ -58,9 +61,6 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
     devDependencies:
-      '@types/debug':
-        specifier: ^4.1.12
-        version: 4.1.13
       '@types/node':
         specifier: ^22.19.8
         version: 22.19.21
@@ -76,6 +76,9 @@ importers:
 
   packages/ndk-cache:
     dependencies:
+      '@types/debug':
+        specifier: 4.1.13
+        version: 4.1.13
       debug:
         specifier: 4.4.3
         version: 4.4.3
@@ -92,9 +95,6 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
     devDependencies:
-      '@types/debug':
-        specifier: ^4.1.12
-        version: 4.1.13
       '@types/node':
         specifier: ^22.19.8
         version: 22.19.21
@@ -294,7 +294,7 @@ packages:
     os: [win32]
 
   '@hashtree/core@https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz':
-    resolution: {tarball: https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz, integrity: sha512-kkZKx/mNqImMy1DnWXRgv2LHaf5HbZg8sIpHV6/wLZKl3cQkmSY9xtjCZSTlUXeXIgOmxDzqDGa2GNf5Rg7b/A==}
+    resolution: {integrity: sha512-kkZKx/mNqImMy1DnWXRgv2LHaf5HbZg8sIpHV6/wLZKl3cQkmSY9xtjCZSTlUXeXIgOmxDzqDGa2GNf5Rg7b/A==, tarball: https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz}
     version: 0.2.1
 
   '@jridgewell/gen-mapping@0.3.13':

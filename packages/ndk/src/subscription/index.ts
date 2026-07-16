@@ -1,4 +1,5 @@
 import { EventEmitter } from "tseep";
+import type { Debugger } from "debug";
 
 import type { NDKEventId, NDKSignedEvent, NostrEvent } from "../events/index.js";
 import { createSignedEvent, NDKEvent } from "../events/index.js";
@@ -388,7 +389,7 @@ export class NDKSubscription extends EventEmitter<{
     public relayFilters?: Map<WebSocket["url"], NDKFilter[]>;
     public relaySet?: NDKRelaySet;
     public ndk: NDK;
-    public debug: debug.Debugger;
+    public debug: Debugger;
 
     /**
      * Events that have been seen by the subscription, with the time they were first seen.
