@@ -1,6 +1,6 @@
 {
   "name": "@iris/svelte-ui",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "type": "module",
   "description": "Shared Svelte UI components for Iris apps",
@@ -91,12 +91,16 @@
     "src"
   ],
   "scripts": {
-    "test": "node --test src/*.test.mjs"
+    "check": "tsc --noEmit",
+    "test": "pnpm check && node --test src/*.test.mjs"
   },
   "dependencies": {
     "minidenticons": "^4.2.1"
   },
   "peerDependencies": {
     "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
   }
 }

@@ -10,7 +10,7 @@
   },
   "packageManager": "pnpm@10.24.0",
   "scripts": {
-    "test": "pnpm verify:dependency-lock && pnpm --filter @iris/identity test && pnpm --filter @iris/svelte-ui test && pnpm --filter @iris/hashtree-app test && pnpm --filter @iris/nostr-pubsub test && pnpm --filter ndk test && pnpm --filter ndk-cache test",
+    "test": "pnpm verify:dependency-lock && pnpm --filter @iris/identity test && pnpm --filter @iris/svelte-ui test && pnpm --filter @iris/hashtree-app test && pnpm --filter ndk test && pnpm --filter ndk-cache test",
     "pack:runtime": "node scripts/pack-runtime.mjs",
     "verify:dependency-lock": "node scripts/verify-dependency-lock.mjs"
   },

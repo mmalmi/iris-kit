@@ -18,8 +18,8 @@ importers:
         version: 5.56.3
     devDependencies:
       '@hashtree/core':
-        specifier: https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.0/hashtree-core-0.2.0.tgz
-        version: https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.0/hashtree-core-0.2.0.tgz
+        specifier: https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz
+        version: https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz
 
   packages/identity:
     dependencies:
@@ -111,22 +111,6 @@ importers:
         specifier: ^4.1.2
         version: 4.1.8(@types/node@22.19.21)(vite@8.0.16(@types/node@22.19.21)(esbuild@0.27.7))
 
-  packages/nostr-pubsub:
-    dependencies:
-      nostr-pubsub:
-        specifier: https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.5/nostr-pubsub-0.1.5.tgz
-        version: https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.5/nostr-pubsub-0.1.5.tgz(nostr-tools@2.23.5(typescript@5.9.3))
-    devDependencies:
-      '@types/node':
-        specifier: ^22.19.8
-        version: 22.19.21
-      nostr-tools:
-        specifier: 2.23.5
-        version: 2.23.5(typescript@5.9.3)
-      typescript:
-        specifier: ^5.3.0
-        version: 5.9.3
-
   packages/release-tools: {}
 
   packages/svelte-ui:
@@ -137,6 +121,10 @@ importers:
       svelte:
         specifier: ^5.0.0
         version: 5.56.3
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
 
 packages:
 
@@ -305,9 +293,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@hashtree/core@https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.0/hashtree-core-0.2.0.tgz':
-    resolution: {tarball: https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.0/hashtree-core-0.2.0.tgz, integrity: sha512-NmGRguZhaboIcvHJlF1CF4YYugcvEWY1LX6KRLPzIoXxHG83jynO1wx9ai5ug3AUyhEZYaU6ssOiOzlRGto2JA==}
-    version: 0.2.0
+  '@hashtree/core@https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz':
+    resolution: {tarball: https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz, integrity: sha512-kkZKx/mNqImMy1DnWXRgv2LHaf5HbZg8sIpHV6/wLZKl3cQkmSY9xtjCZSTlUXeXIgOmxDzqDGa2GNf5Rg7b/A==}
+    version: 0.2.1
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -892,12 +880,6 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nostr-pubsub@https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.5/nostr-pubsub-0.1.5.tgz:
-    resolution: {integrity: sha512-zza+r1FWKMopO4XUxLD0GfnBvUOpNju9Pr4nKCZ8np8xqo0sKDaCcbM/VvZmjNd2/iHdtyducpkrmAXnqUt+9w==, tarball: https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.5/nostr-pubsub-0.1.5.tgz}
-    version: 0.1.5
-    peerDependencies:
-      nostr-tools: '>=2.17.0 <3'
-
   nostr-social-graph@https://github.com/mmalmi/nostr-social-graph/releases/download/v2.0.0/nostr-social-graph-2.0.0.tgz:
     resolution: {tarball: https://github.com/mmalmi/nostr-social-graph/releases/download/v2.0.0/nostr-social-graph-2.0.0.tgz}
     version: 2.0.0
@@ -1275,7 +1257,7 @@ snapshots:
   '@esbuild/win32-x64@0.27.7':
     optional: true
 
-  '@hashtree/core@https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.0/hashtree-core-0.2.0.tgz':
+  '@hashtree/core@https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz':
     dependencies:
       '@msgpack/msgpack': 3.1.3
       '@noble/hashes': 2.0.1
@@ -1738,10 +1720,6 @@ snapshots:
       thenify-all: 1.6.0
 
   nanoid@3.3.12: {}
-
-  nostr-pubsub@https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.5/nostr-pubsub-0.1.5.tgz(nostr-tools@2.23.5(typescript@5.9.3)):
-    dependencies:
-      nostr-tools: 2.23.5(typescript@5.9.3)
 
   nostr-social-graph@https://github.com/mmalmi/nostr-social-graph/releases/download/v2.0.0/nostr-social-graph-2.0.0.tgz(typescript@5.9.3):
     dependencies:

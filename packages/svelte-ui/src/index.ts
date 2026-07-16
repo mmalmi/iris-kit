@@ -70,7 +70,6 @@ export {
   userSettingsKeyLabel,
   type UserSettingsCapabilities,
   type UserSettingsKey,
-  type UserSettingsPendingRequest,
 } from './userSettings';
 export {
   coolName,

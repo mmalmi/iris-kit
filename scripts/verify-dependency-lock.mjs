@@ -9,17 +9,9 @@ const dependencies = [
     packageName: "@hashtree/core",
     consumer: "@iris/hashtree-app",
     consumerManifest: "packages/hashtree-app/package.json",
-    url: "https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.0/hashtree-core-0.2.0.tgz",
+    url: "https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz",
     integrity:
-      "sha512-NmGRguZhaboIcvHJlF1CF4YYugcvEWY1LX6KRLPzIoXxHG83jynO1wx9ai5ug3AUyhEZYaU6ssOiOzlRGto2JA==",
-  },
-  {
-    packageName: "nostr-pubsub",
-    consumer: "@iris/nostr-pubsub",
-    consumerManifest: "packages/nostr-pubsub/package.json",
-    url: "https://github.com/mmalmi/nostr-pubsub/releases/download/nostr-pubsub-ts-v0.1.5/nostr-pubsub-0.1.5.tgz",
-    integrity:
-      "sha512-zza+r1FWKMopO4XUxLD0GfnBvUOpNju9Pr4nKCZ8np8xqo0sKDaCcbM/VvZmjNd2/iHdtyducpkrmAXnqUt+9w==",
+      "sha512-kkZKx/mNqImMy1DnWXRgv2LHaf5HbZg8sIpHV6/wLZKl3cQkmSY9xtjCZSTlUXeXIgOmxDzqDGa2GNf5Rg7b/A==",
   },
 ];
 
