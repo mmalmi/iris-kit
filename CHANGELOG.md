@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Resolve the supported Vite toolchain on esbuild 0.28.1 so the frozen
+  workspace lock contains no known OSV advisories.
+- Build the local NDK package before its cache adapter tests so the root test
+  command is reproducible from a clean worktree without leftover `dist` files.
+
 ## Runtime 0.2.2 - 2026-07-16
 
 - Corrected `ndk@0.2.1` declaration generation so its public NIP utility and

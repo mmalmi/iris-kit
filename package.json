@@ -10,13 +10,14 @@
   },
   "packageManager": "pnpm@10.24.0",
   "scripts": {
-    "test": "pnpm verify:dependency-lock && pnpm --filter @iris/identity test && pnpm --filter @iris/svelte-ui test && pnpm --filter @iris/hashtree-app test && pnpm --filter @iris/release-tools test && pnpm --filter ndk test && pnpm --filter ndk-cache test && pnpm test:packed-consumer",
+    "test": "pnpm verify:dependency-lock && pnpm --filter @iris/identity test && pnpm --filter @iris/svelte-ui test && pnpm --filter @iris/hashtree-app test && pnpm --filter @iris/release-tools test && pnpm --filter ndk test && pnpm --filter ndk build && pnpm --filter ndk-cache test && pnpm test:packed-consumer",
     "pack:runtime": "node scripts/pack-runtime.mjs",
     "test:packed-consumer": "node scripts/pack-runtime.mjs dist-runtime ndk ndk-cache && node scripts/test-packed-consumer.mjs",
     "verify:dependency-lock": "node scripts/verify-dependency-lock.mjs"
   },
   "pnpm": {
     "overrides": {
+      "esbuild": "0.28.1",
       "ndk": "link:packages/ndk"
     }
   }
