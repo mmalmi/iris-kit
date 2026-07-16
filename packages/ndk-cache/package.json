@@ -1,14 +1,21 @@
 {
   "name": "ndk-cache",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "license": "MIT",
   "private": true,
   "description": "Dexie IndexedDB cache adapter for NDK",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",
     "test": "vitest run"
@@ -16,7 +23,7 @@
   "dependencies": {
     "debug": "4.4.3",
     "dexie": "4.4.2",
-    "ndk": "file:../ndk",
+    "ndk": "https://github.com/mmalmi/iris-kit/releases/download/runtime-v0.2.0/ndk-0.2.0.tgz",
     "nostr-tools": "2.23.3",
     "typescript-lru-cache": "2.0.0"
   },

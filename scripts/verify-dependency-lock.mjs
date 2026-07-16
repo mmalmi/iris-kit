@@ -9,9 +9,9 @@ const dependencies = [
     packageName: "@hashtree/core",
     consumer: "@iris/hashtree-app",
     consumerManifest: "packages/hashtree-app/package.json",
-    url: "https://github.com/mmalmi/hashtree/releases/download/hashtree-core-ts-v0.1.8/hashtree-core-0.1.8.tgz",
+    url: "https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.0/hashtree-core-0.2.0.tgz",
     integrity:
-      "sha512-+V3kHSyDe9Wmdnhew+1JGFUoGELLmFPXXvXtjIcNPVGsn/hYAWIXINPQrSRI2DYer8Uy5One7LLfzn0XMssC5w==",
+      "sha512-NmGRguZhaboIcvHJlF1CF4YYugcvEWY1LX6KRLPzIoXxHG83jynO1wx9ai5ug3AUyhEZYaU6ssOiOzlRGto2JA==",
   },
   {
     packageName: "nostr-pubsub",
@@ -36,8 +36,14 @@ for (const dependency of dependencies) {
     );
   }
 
-  const resolution = `tarball: ${dependency.url}, integrity: ${dependency.integrity}`;
-  if (!lockfile.includes(resolution)) {
+  const packageKey = `${dependency.packageName}@${dependency.url}`;
+  const packageStart = lockfile.indexOf(packageKey);
+  const packageEnd = packageStart < 0 ? -1 : lockfile.indexOf("\n\n", packageStart);
+  const resolution = packageStart < 0
+    ? ""
+    : lockfile.slice(packageStart, packageEnd < 0 ? undefined : packageEnd);
+  if (!resolution.includes(`tarball: ${dependency.url}`)
+    || !resolution.includes(`integrity: ${dependency.integrity}`)) {
     throw new Error(
       `${dependency.packageName} is missing its pinned GitHub URL or SHA-512 integrity in pnpm-lock.yaml`,
     );

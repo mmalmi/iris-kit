@@ -59,6 +59,6 @@
     "nostr-social-graph": "*"
   },
   "devDependencies": {
-    "nostr-social-graph": "link:../../../nostr-social-graph/ts"
+    "nostr-social-graph": "https://github.com/mmalmi/nostr-social-graph/releases/download/v2.0.0/nostr-social-graph-2.0.0.tgz"
   }
 }
