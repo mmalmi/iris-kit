@@ -18,7 +18,7 @@ const packages = requested.size === 0
   ? runtimePackages
   : runtimePackages.filter(({ dir }) => requested.has(dir));
 
-if (packages.length !== requested.size) {
+if (requested.size > 0 && packages.length !== requested.size) {
   const known = new Set(runtimePackages.map(({ dir }) => dir));
   const unknown = [...requested].filter((name) => !known.has(name));
   throw new Error(`Unknown runtime package${unknown.length === 1 ? '' : 's'}: ${unknown.join(', ')}`);

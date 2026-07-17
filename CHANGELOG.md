@@ -7,6 +7,14 @@
 - Build the local NDK package before its cache adapter tests so the root test
   command is reproducible from a clean worktree without leftover `dist` files.
 
+## Runtime 0.2.3 - 2026-07-17
+
+- Released `@iris/hashtree-app@0.1.3` with a peer range that accepts Hashtree
+  core 0.3.0. The shared UI/helpers remain storage- and router-agnostic; apps
+  consume the adaptive `BlobRouter` from Hashtree instead of copying it here.
+- Restored the runtime packer's no-filter path so release builds still package
+  the complete runtime while focused consumer tests may select a subset.
+
 ## Runtime 0.2.2 - 2026-07-16
 
 - Corrected `ndk@0.2.1` declaration generation so its public NIP utility and

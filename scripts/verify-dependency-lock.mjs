@@ -9,9 +9,9 @@ const dependencies = [
     packageName: "@hashtree/core",
     consumer: "@iris/hashtree-app",
     consumerManifest: "packages/hashtree-app/package.json",
-    url: "https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz",
+    url: "https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.5.0/hashtree-core-0.3.0.tgz",
     integrity:
-      "sha512-kkZKx/mNqImMy1DnWXRgv2LHaf5HbZg8sIpHV6/wLZKl3cQkmSY9xtjCZSTlUXeXIgOmxDzqDGa2GNf5Rg7b/A==",
+      "sha512-kh4ZhzsJTd/iLAYUeZ/+Q9EzA/Ev9FObOLcOveIvx7Ghtk6qdeiTexoGCOiu5X8VmlksxRPleCVeMh1k9/2AGA==",
   },
 ];
 const runtimeDependencies = [
