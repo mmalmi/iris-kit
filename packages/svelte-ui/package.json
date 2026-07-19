@@ -62,6 +62,14 @@
       "svelte": "./src/SocialDistanceBadge.svelte",
       "default": "./src/SocialDistanceBadge.svelte"
     },
+    "./SettingsGroup.svelte": {
+      "svelte": "./src/SettingsGroup.svelte",
+      "default": "./src/SettingsGroup.svelte"
+    },
+    "./SettingsGroupItem.svelte": {
+      "svelte": "./src/SettingsGroupItem.svelte",
+      "default": "./src/SettingsGroupItem.svelte"
+    },
     "./UserRow.svelte": {
       "svelte": "./src/UserRow.svelte",
       "default": "./src/UserRow.svelte"
