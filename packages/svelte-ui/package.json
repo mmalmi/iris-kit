@@ -14,6 +14,14 @@
       "svelte": "./src/Avatar.svelte",
       "default": "./src/Avatar.svelte"
     },
+    "./AvatarGroup.svelte": {
+      "svelte": "./src/AvatarGroup.svelte",
+      "default": "./src/AvatarGroup.svelte"
+    },
+    "./avatarGroup": {
+      "types": "./src/avatarGroup.ts",
+      "default": "./src/avatarGroup.ts"
+    },
     "./AccountSwitcher.svelte": {
       "svelte": "./src/AccountSwitcher.svelte",
       "default": "./src/AccountSwitcher.svelte"
