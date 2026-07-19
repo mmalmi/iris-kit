@@ -13,7 +13,7 @@
     ariaHidden?: boolean;
     loading?: 'lazy' | 'eager';
     decoding?: 'async' | 'auto' | 'sync';
-    referrerpolicy?: HTMLImageElement['referrerPolicy'];
+    referrerpolicy?: ReferrerPolicy;
     imgProxy?: ImgProxySettingsInput | false;
     loadOriginalIfProxyFails?: boolean;
     hideBroken?: boolean;

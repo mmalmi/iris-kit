@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { HTMLInputAttributes } from 'svelte/elements';
   import Avatar from './Avatar.svelte';
 
   interface AccountSwitcherAccount {
@@ -19,7 +20,7 @@
     addLabel?: string;
     showAddForm?: boolean;
     error?: string;
-    autocomplete?: string;
+    autocomplete?: HTMLInputAttributes['autocomplete'];
     onInput?: (value: string) => void;
     onAdd?: (value: string) => void;
     onSelect?: (account: AccountSwitcherAccount) => void;
