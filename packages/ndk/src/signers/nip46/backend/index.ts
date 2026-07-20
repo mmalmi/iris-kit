@@ -1,4 +1,5 @@
 import { hexToBytes } from "@noble/hashes/utils.js";
+import type { Debugger } from "debug";
 import type { NDKEvent } from "../../../events/index.js";
 import type { NDK } from "../../../ndk/index.js";
 import type { NDKUser } from "../../../user/index.js";
@@ -59,7 +60,7 @@ export class NDKNip46Backend {
     readonly ndk: NDK;
     readonly signer: NDKSigner;
     public localUser?: NDKUser;
-    readonly debug: debug.Debugger;
+    readonly debug: Debugger;
     public rpc: NDKNostrRpc;
     private permitCallback: Nip46PermitCallback;
     public relayUrls: WebSocket["url"][];

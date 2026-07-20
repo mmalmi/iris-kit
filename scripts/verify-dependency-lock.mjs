@@ -9,9 +9,17 @@ const dependencies = [
     packageName: "@hashtree/core",
     consumer: "@iris/hashtree-app",
     consumerManifest: "packages/hashtree-app/package.json",
-    url: "https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.4.2/hashtree-core-0.2.1.tgz",
+    url: "https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.5.0/hashtree-core-0.3.0.tgz",
     integrity:
-      "sha512-kkZKx/mNqImMy1DnWXRgv2LHaf5HbZg8sIpHV6/wLZKl3cQkmSY9xtjCZSTlUXeXIgOmxDzqDGa2GNf5Rg7b/A==",
+      "sha512-kh4ZhzsJTd/iLAYUeZ/+Q9EzA/Ev9FObOLcOveIvx7Ghtk6qdeiTexoGCOiu5X8VmlksxRPleCVeMh1k9/2AGA==",
+  },
+];
+const runtimeDependencies = [
+  {
+    packageName: "ndk",
+    consumer: "ndk-cache",
+    consumerManifest: "packages/ndk-cache/package.json",
+    url: "https://github.com/mmalmi/iris-kit/releases/download/runtime-v0.2.2/ndk-0.2.1.tgz",
   },
 ];
 
@@ -42,8 +50,24 @@ for (const dependency of dependencies) {
   }
 }
 
+for (const dependency of runtimeDependencies) {
+  const consumer = JSON.parse(
+    await readFile(new URL(dependency.consumerManifest, root), "utf8"),
+  );
+  if (consumer.dependencies?.[dependency.packageName] !== dependency.url) {
+    throw new Error(
+      `${dependency.consumer} must load ${dependency.packageName} from ${dependency.url}`,
+    );
+  }
+}
+
 if (manifest.scripts?.test?.startsWith("pnpm verify:dependency-lock") !== true) {
   throw new Error("The normal test gate must verify GitHub dependency integrity");
 }
+if (!manifest.scripts?.test?.includes("pnpm test:packed-consumer")) {
+  throw new Error("The normal test gate must compile the packed strict consumer");
+}
 
-console.log(`Verified ${dependencies.length} GitHub dependency lock entries`);
+console.log(
+  `Verified ${dependencies.length} GitHub dependency lock and ${runtimeDependencies.length} runtime pin entries`,
+);

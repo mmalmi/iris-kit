@@ -1,10 +1,11 @@
+import type { Debugger } from "debug";
 import type { NDKEvent } from "../events";
 import type { NDKRelay } from ".";
 import { NDKRelayStatus } from ".";
 
 export class NDKRelayPublisher {
     private ndkRelay: NDKRelay;
-    private debug: debug.Debugger;
+    private debug: Debugger;
 
     public constructor(ndkRelay: NDKRelay) {
         this.ndkRelay = ndkRelay;

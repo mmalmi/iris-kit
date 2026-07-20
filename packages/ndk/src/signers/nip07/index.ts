@@ -1,4 +1,4 @@
-import debug from "debug";
+import debug, { type Debugger } from "debug";
 
 import type { EncryptionMethod } from "../../events/encryption.js";
 import type { NostrEvent } from "../../events/index.js";
@@ -33,7 +33,7 @@ export class NDKNip07Signer implements NDKSigner {
     private _userPromise: Promise<NDKUser> | undefined;
     public encryptionQueue: EncryptionQueueItem[] = [];
     private encryptionProcessing = false;
-    private debug: debug.Debugger;
+    private debug: Debugger;
     private waitTimeout: number;
     private _pubkey: string | undefined;
     private ndk?: NDK;

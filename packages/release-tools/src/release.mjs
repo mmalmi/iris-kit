@@ -119,7 +119,12 @@ export function createReleasePlan({
     });
   }
 
-  return { profile, distDir, steps };
+  return {
+    profile,
+    distDir,
+    steps,
+    htreePushCommand: resolveHtreeCommand('push'),
+  };
 }
 
 function createOutputWriter(stream, suppressDisplayPatterns) {
@@ -242,6 +247,13 @@ export function assertStepSucceeded(step, result) {
   }
 }
 
+function hasFileServerErrors(result) {
+  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+  const hasNonzeroErrorCount = [...output.matchAll(/\bErrors:\s*(\d+)\b/gi)]
+    .some(([, count]) => Number(count) > 0);
+  return /file server push failed/i.test(output) || hasNonzeroErrorCount;
+}
+
 export async function runReleasePlan(
   options,
   plan,
@@ -259,6 +271,7 @@ export async function runReleasePlan(
   }
 
   let publishOutput = '';
+  let publishNeedsPush = false;
   let deployOutput = '';
   const prereleaseSteps = plan.steps.filter((step) => !isReleaseStep(step));
   const releaseSteps = plan.steps.filter(isReleaseStep);
@@ -284,6 +297,7 @@ export async function runReleasePlan(
     assertStepSucceeded(step, result);
     if (step.id === 'publish') {
       publishOutput = `${result.stdout}\n${result.stderr}`;
+      publishNeedsPush = hasFileServerErrors(result);
     }
     if (step.id === 'deploy') {
       deployOutput = `${result.stdout}\n${result.stderr}`;
@@ -291,6 +305,20 @@ export async function runReleasePlan(
   }
 
   const publish = parsePublishOutput(publishOutput);
+  if (publishNeedsPush) {
+    const pushStep = {
+      id: 'push',
+      label: `Retry ${plan.profile.appName} file-server upload`,
+      command: [...plan.htreePushCommand, publish.nhash, '--force'],
+      cwd: plan.distDir,
+    };
+    const result = await runner(pushStep);
+    assertStepSucceeded(pushStep, result);
+    if (hasFileServerErrors(result)) {
+      throw new Error(`${pushStep.label} completed with file-server errors`);
+    }
+  }
+
   return {
     profile: plan.profile,
     treeName: options.treeName,
@@ -303,4 +331,3 @@ export async function runReleasePlan(
     domains: options.skipCloudflare || !options.workerName ? [] : options.domains ?? [],
   };
 }
-

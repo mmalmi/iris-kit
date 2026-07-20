@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## Runtime 0.2.4 - 2026-07-20
+
+- Resolve the supported Vite toolchain on esbuild 0.28.1 so the frozen
+  workspace lock contains no known OSV advisories.
+- Build the local NDK package before its cache adapter tests so the root test
+  command is reproducible from a clean worktree without leftover `dist` files.
+- Released `@iris/svelte-ui@0.1.2` with the shared avatar group and settings
+  primitives used by standalone Iris consumers.
+
+## Runtime 0.2.3 - 2026-07-17
+
+- Released `@iris/hashtree-app@0.1.3` with a peer range that accepts Hashtree
+  core 0.3.0. The shared UI/helpers remain storage- and router-agnostic; apps
+  consume the adaptive `BlobRouter` from Hashtree instead of copying it here.
+- Restored the runtime packer's no-filter path so release builds still package
+  the complete runtime while focused consumer tests may select a subset.
+
+## Runtime 0.2.2 - 2026-07-16
+
+- Corrected `ndk@0.2.1` declaration generation so its public NIP utility and
+  debug types compile without declaration implementations or undeclared names.
+- Published `ndk-cache@0.2.1` against the corrected immutable NDK artifact and
+  added a cold ESM/NodeNext/strict TypeScript consumer to the normal test gate.
+- Updated `@iris/release-tools@0.1.1` to recover from status-zero Hashtree
+  file-server upload failures with one forced nhash push and fail closed if the
+  retry still reports errors.
+
 ## Runtime 0.2.1 - 2026-07-16
 
 - Corrected the `@iris/svelte-ui@0.1.1` root type barrel and added a TypeScript

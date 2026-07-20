@@ -1,4 +1,4 @@
-import type debug from "debug";
+import type { Debugger } from "debug";
 import type { Table } from "dexie";
 import type { LRUCache } from "typescript-lru-cache";
 import type { Nip05 } from "../db";
@@ -16,7 +16,7 @@ export async function nip05WarmUp(cacheHandler: CacheHandler<Nip05CacheEntry>, n
     }
 }
 
-export const nip05Dump = (nip05s: Table<Nip05>, debug: debug.IDebugger) => {
+export const nip05Dump = (nip05s: Table<Nip05>, debug: Debugger) => {
     return async (dirtyKeys: Set<string>, cache: LRUCache<string, Nip05CacheEntry>) => {
         const entries = [];
 

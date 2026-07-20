@@ -1,4 +1,5 @@
 import { EventEmitter } from "tseep";
+import type { Debugger } from "debug";
 import type { EncryptionMethod } from "../../events/encryption.js";
 import type { NostrEvent } from "../../events/index.js";
 import { NDKKind } from "../../events/kinds/index.js";
@@ -83,7 +84,7 @@ export class NDKNip46Signer extends EventEmitter implements NDKSigner {
     public localSigner: NDKPrivateKeySigner;
     private nip05?: string;
     public rpc: NDKNostrRpc;
-    private debug: debug.Debugger;
+    private debug: Debugger;
     public relayUrls: string[] | undefined;
     private subscription: NDKSubscription | undefined;
 

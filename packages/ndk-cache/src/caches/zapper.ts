@@ -1,4 +1,4 @@
-import type debug from "debug";
+import type { Debugger } from "debug";
 import type { Table } from "dexie";
 import type { LRUCache } from "typescript-lru-cache";
 import type { Lnurl } from "../db";
@@ -16,7 +16,7 @@ export async function zapperWarmUp(cacheHandler: CacheHandler<ZapperCacheEntry>,
     }
 }
 
-export const zapperDump = (lnurls: Table<Lnurl>, debug: debug.IDebugger) => {
+export const zapperDump = (lnurls: Table<Lnurl>, debug: Debugger) => {
     return async (dirtyKeys: Set<string>, cache: LRUCache<string, ZapperCacheEntry>) => {
         const entries = [];
 

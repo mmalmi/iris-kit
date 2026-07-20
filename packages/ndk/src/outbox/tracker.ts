@@ -1,5 +1,6 @@
 import { EventEmitter } from "tseep";
 import { LRUCache } from "typescript-lru-cache";
+import type { Debugger } from "debug";
 
 import type { NDKRelayList } from "../events/kinds/relay-list.js";
 import type { NDK } from "../ndk/index.js";
@@ -51,7 +52,7 @@ export class OutboxItem {
 export class OutboxTracker extends EventEmitter {
     public data: LRUCache<Hexpubkey, OutboxItem>;
     private ndk: NDK;
-    private debug: debug.Debugger;
+    private debug: Debugger;
 
     constructor(ndk: NDK) {
         super();

@@ -1,4 +1,4 @@
-import type debug from "debug";
+import type { Debugger } from "debug";
 import type { Table } from "dexie";
 import type { LRUCache } from "typescript-lru-cache";
 import type { Event } from "../db";
@@ -13,7 +13,7 @@ export async function eventsWarmUp(cacheHandler: CacheHandler<EventCacheEntry>, 
     }
 }
 
-export const eventsDump = (events: Table<Event>, debug: debug.IDebugger) => {
+export const eventsDump = (events: Table<Event>, debug: Debugger) => {
     return async (dirtyKeys: Set<string>, cache: LRUCache<string, EventCacheEntry>) => {
         const entries: EventCacheEntry[] = [];
 
