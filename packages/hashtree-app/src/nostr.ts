@@ -114,6 +114,10 @@ export class AppNostrClient {
   }
 
   async fetchEvents(filters: Filter | Filter[], timeoutMs = 10_000): Promise<Set<Event>> {
+    return this.collectEvents(filters, timeoutMs);
+  }
+
+  private collectEvents(filters: Filter | Filter[], timeoutMs: number, exactId?: string): Promise<Set<Event>> {
     return new Promise((resolve, reject) => {
       const events = new Map<string, Event>();
       const subscription = this.subscribe(filters, { closeAfterHistory: true });
@@ -122,7 +126,14 @@ export class AppNostrClient {
         if (events.size > 0) resolve(new Set(events.values()));
         else reject(new Error('Event history is incomplete; try again when connected.'));
       }, timeoutMs);
-      subscription.on('event', event => events.set(event.id, event));
+      subscription.on('event', event => {
+        events.set(event.id, event);
+        if (exactId === event.id) {
+          clearTimeout(timer);
+          subscription.stop();
+          resolve(new Set([event]));
+        }
+      });
       subscription.on('history', status => {
         clearTimeout(timer);
         if (status.complete || events.size > 0) resolve(new Set(events.values()));
@@ -132,7 +143,11 @@ export class AppNostrClient {
   }
 
   async fetchEvent(idOrFilter: string | Filter): Promise<Event | null> {
-    const events = await this.fetchEvents(typeof idOrFilter === 'string' ? { ids: [idOrFilter] } : idOrFilter);
+    const filter = typeof idOrFilter === 'string' ? { ids: [idOrFilter] } : idOrFilter;
+    const id = filter.ids?.length === 1 ? filter.ids[0] : undefined;
+    // A verified full ID identifies one immutable event; further history cannot replace it.
+    const exactId = id && /^[0-9a-f]{64}$/.test(id) ? id : undefined;
+    const events = await this.collectEvents(filter, 10_000, exactId);
     return [...events].sort((a, b) => b.created_at - a.created_at || a.id.localeCompare(b.id))[0] ?? null;
   }
 

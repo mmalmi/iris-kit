@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## Runtime 0.2.6 - 2026-09-30
+
+- Return a verified exact event ID as soon as it is available, without waiting
+  for unrelated relay or peer history to finish. Prefix and replaceable-event
+  queries still wait for history before choosing the newest event.
+- Release `@iris/hashtree-app@0.1.5`; preserve account keys, offline caching,
+  subscription cleanup, and incomplete-history errors.
+
 ## Runtime 0.2.5 - 2026-09-30
 
 - Add `@iris/identity@0.3.1` remote signing through an injected transport,

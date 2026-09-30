@@ -78,3 +78,37 @@ test('cached events remain readable when the network history times out', async (
   assert.deepEqual([...await pending], [{ id: 'saved' }]);
   assert.equal(source.subscriptions.size, 0);
 });
+
+test('exact ID lookup resolves a retained event before slow network history completes', async () => {
+  const client = new AppNostrClient();
+  const source = backend();
+  client.setBackend(source);
+  const event = { id: 'a'.repeat(64), created_at: 1 };
+  const pending = client.fetchEvent(event.id);
+  await Promise.resolve();
+  const sub = [...source.subscriptions.values()][0];
+  sub.event(event);
+  // A cache hit must release its subscription without waiting for EOSE.
+  const releasedBeforeHistory = source.subscriptions.size === 0;
+  sub.history({ complete: true, reason: 'eose' });
+  assert.equal(await pending, event);
+  assert.equal(releasedBeforeHistory, true);
+});
+
+test('prefix and replaceable lookups retain complete-history newest-event selection', async () => {
+  for (const filter of ['a'.repeat(8), { kinds: [0], authors: ['b'.repeat(64)] }]) {
+    const client = new AppNostrClient();
+    const source = backend();
+    client.setBackend(source);
+    const pending = client.fetchEvent(filter);
+    await Promise.resolve();
+    const sub = [...source.subscriptions.values()][0];
+    sub.event({ id: 'a'.repeat(64), created_at: 1 });
+    assert.equal(source.subscriptions.size, 1);
+    const newest = { id: 'a'.repeat(63) + 'b', created_at: 2 };
+    sub.event(newest);
+    sub.history({ complete: true, reason: 'eose' });
+    assert.equal(await pending, newest);
+    assert.equal(source.subscriptions.size, 0);
+  }
+});
