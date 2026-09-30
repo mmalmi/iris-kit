@@ -1,6 +1,6 @@
-import { finalizeEvent, getPublicKey, nip19, nip44, verifyEvent, type Event } from 'nostr-tools';
+import { finalizeEvent, getPublicKey, nip19, nip44, verifyEvent, type Event, type EventTemplate as NostrIdentityEventDraft } from 'nostr-tools';
 import { privateKeyFromSeedWords, validateWords } from 'nostr-tools/nip06';
-import { normalizeHexPubkey, type NostrIdentityEventDraft } from './profile.ts';
+import { normalizeHexPubkey } from './profile.ts';
 
 export type Awaitable<T> = T | Promise<T>;
 

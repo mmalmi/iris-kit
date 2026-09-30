@@ -1,6 +1,6 @@
 {
   "name": "@iris/identity",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "MIT",
   "type": "module",
   "description": "Shared NostrIdentity identity and device-approval bootstrap helpers",
@@ -44,6 +44,10 @@
     "./signers": {
       "types": "./src/signers.ts",
       "default": "./src/signers.ts"
+    },
+    "./remoteSigner": {
+      "types": "./src/remoteSigner.ts",
+      "default": "./src/remoteSigner.ts"
     }
   },
   "files": [

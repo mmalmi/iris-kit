@@ -4,6 +4,9 @@
 
 ## Runtime 0.2.5 - 2026-09-30
 
+- Add `@iris/identity@0.3.1` remote signing through an injected transport,
+  preserving NIP-46 recovery and client keys with bounded requests and cleanup.
+
 - Released `@iris/hashtree-app@0.1.4` with a plain-event Nostr client that
   delegates networking, persistence and publication retries to the app's
   shared worker or native backend.

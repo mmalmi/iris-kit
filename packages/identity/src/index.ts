@@ -14,3 +14,4 @@ export * from './profileValidation.ts';
 export * from './representativeProfile.ts';
 export * from './session.ts';
 export * from './signers.ts';
+export * from './remoteSigner.ts';
