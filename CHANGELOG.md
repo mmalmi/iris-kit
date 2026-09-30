@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## Runtime 0.2.5 - 2026-09-30
+
+- Released `@iris/hashtree-app@0.1.4` with a plain-event Nostr client that
+  delegates networking, persistence and publication retries to the app's
+  shared worker or native backend.
+- Preserve existing signers and session keys, replay subscriptions when the
+  backend changes, retain cached reads offline, and keep incomplete history
+  distinct from a confirmed empty result.
+
 ## Runtime 0.2.4 - 2026-07-20
 
 - Resolve the supported Vite toolchain on esbuild 0.28.1 so the frozen

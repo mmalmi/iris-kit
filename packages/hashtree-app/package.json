@@ -1,6 +1,6 @@
 {
   "name": "@iris/hashtree-app",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "license": "MIT",
   "type": "module",
   "description": "Shared Hashtree app runtime helpers and UI for Iris apps",

@@ -14,6 +14,9 @@ importers:
 
   packages/hashtree-app:
     dependencies:
+      nostr-tools:
+        specifier: ^2.23.0
+        version: 2.23.5(typescript@5.9.3)
       svelte:
         specifier: ^5.0.0
         version: 5.56.3
