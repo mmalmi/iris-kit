@@ -1,5 +1,10 @@
 # @nostr-dev-kit/ndk-cache-dexie
 
+## Iris 0.2.1 - 2026-07-16
+
+- Use the corrected immutable Iris NDK package and expose valid debug and Dexie
+  types to strict NodeNext consumers.
+
 ## 2.7.8
 
 ### Patch Changes

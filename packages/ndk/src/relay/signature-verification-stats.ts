@@ -1,4 +1,4 @@
-import debug from "debug";
+import debug, { type Debugger } from "debug";
 import type { NDK } from "../ndk/index.js";
 
 /**
@@ -7,7 +7,7 @@ import type { NDK } from "../ndk/index.js";
  */
 export class SignatureVerificationStats {
     private ndk: NDK;
-    private debug: debug.Debugger;
+    private debug: Debugger;
     private intervalId: ReturnType<typeof setInterval> | null = null;
     private intervalMs: number;
 

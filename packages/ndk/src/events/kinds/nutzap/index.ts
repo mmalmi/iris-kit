@@ -1,4 +1,4 @@
-import debug from "debug";
+import debug, { type Debugger } from "debug";
 import type NDK from "../../../index.js";
 import type { Hexpubkey, NostrEvent } from "../../../index.js";
 import { NDKEvent, NDKKind, NDKUser } from "../../../index.js";
@@ -14,7 +14,7 @@ import {
  * Represents a NIP-61 nutzap
  */
 export class NDKNutzap extends NDKEvent {
-    private debug: debug.Debugger;
+    private debug: Debugger;
     private _proofs: Proof[] = [];
 
     static kind = NDKKind.Nutzap;

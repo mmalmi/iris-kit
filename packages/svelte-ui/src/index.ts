@@ -11,6 +11,8 @@ export { default as Minidenticon } from './Minidenticon.svelte';
 export { default as Name } from './Name.svelte';
 export { default as ProxyImg } from './ProxyImg.svelte';
 export { default as SocialDistanceBadge } from './SocialDistanceBadge.svelte';
+export { default as SettingsGroup } from './SettingsGroup.svelte';
+export { default as SettingsGroupItem } from './SettingsGroupItem.svelte';
 export { default as UserRow } from './UserRow.svelte';
 export {
   clearCopyReset,

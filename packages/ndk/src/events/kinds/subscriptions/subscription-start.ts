@@ -1,4 +1,4 @@
-import debug from "debug";
+import debug, { type Debugger } from "debug";
 import type { NDK } from "../../../ndk";
 import { NDKUser } from "../../../user";
 import type { NostrEvent } from "../..";
@@ -29,7 +29,7 @@ import { NDKSubscriptionTier } from "./tier";
  * // }
  */
 export class NDKSubscriptionStart extends NDKEvent {
-    private debug: debug.Debugger;
+    private debug: Debugger;
     static kind = NDKKind.Subscribe;
     static kinds = [NDKKind.Subscribe];
 

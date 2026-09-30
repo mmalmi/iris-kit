@@ -1,4 +1,4 @@
-import debug from "debug";
+import debug, { type Debugger } from "debug";
 import type { NostrEvent } from "nostr-tools";
 import { nip19 } from "nostr-tools";
 import { EventEmitter } from "tseep";
@@ -87,7 +87,7 @@ export interface NDKConstructorParams {
     /**
      * Debug instance to use
      */
-    debug?: debug.Debugger;
+    debug?: Debugger;
 
     /**
      * Provide a caller function to receive all networking traffic from relays
@@ -341,7 +341,7 @@ export class NDK extends EventEmitter<{
     private _signer?: NDKSigner;
     private _activeUser?: NDKUser;
     public cacheAdapter?: NDKCacheAdapter;
-    public debug: debug.Debugger;
+    public debug: Debugger;
     public devWriteRelaySet?: NDKRelaySet;
     public outboxTracker?: OutboxTracker;
     public muteFilter?: (event: NDKEvent) => boolean;

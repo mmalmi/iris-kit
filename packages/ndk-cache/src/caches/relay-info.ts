@@ -1,4 +1,4 @@
-import type debug from "debug";
+import type { Debugger } from "debug";
 import type { Table } from "dexie";
 import type { LRUCache } from "typescript-lru-cache";
 import type { RelayStatus } from "../db";
@@ -20,7 +20,7 @@ export async function relayInfoWarmUp(cacheHandler: CacheHandler<RelayStatus>, r
     }
 }
 
-export const relayInfoDump = (relayStatus: Table<RelayStatus>, debug: debug.IDebugger) => {
+export const relayInfoDump = (relayStatus: Table<RelayStatus>, debug: Debugger) => {
     return async (dirtyKeys: Set<string>, cache: LRUCache<string, RelayStatus>) => {
         const entries = [];
 

@@ -1,4 +1,4 @@
-import type debug from "debug";
+import type { Debugger } from "debug";
 import { EventEmitter } from "tseep";
 
 import type { NDK } from "../../ndk/index.js";
@@ -45,7 +45,7 @@ export class NDKPool extends EventEmitter<{
     private _relays = new Map<WebSocket["url"], NDKRelay>();
     private status: "idle" | "active" = "idle";
     public autoConnectRelays = new Set<WebSocket["url"]>();
-    private debug: debug.Debugger;
+    private debug: Debugger;
     private temporaryRelayTimers = new Map<WebSocket["url"], NodeJS.Timeout>();
     private flappingRelays: Set<WebSocket["url"]> = new Set();
     // A map to store timeouts for each flapping relay.
@@ -68,7 +68,7 @@ export class NDKPool extends EventEmitter<{
             debug,
             name,
         }: {
-            debug?: debug.Debugger;
+            debug?: Debugger;
             name?: string;
         } = {},
     ) {

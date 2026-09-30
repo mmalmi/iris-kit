@@ -14,7 +14,7 @@ import type {
     ProfilePointer,
 } from "ndk";
 import { deserialize, NDKEvent, type NDKRelay, profileFromEvent } from "ndk";
-import createDebug from "debug";
+import createDebug, { type Debugger } from "debug";
 import { matchFilter } from "nostr-tools";
 import { DexieCacheModuleManager } from "./cache-module.js";
 import { type EventTagCacheEntry, eventTagsDump, eventTagsWarmUp } from "./caches/event-tags.js";
@@ -46,7 +46,7 @@ export interface NDKCacheAdapterDexieOptions {
     /**
      * Debug instance to use for logging
      */
-    debug?: debug.IDebugger;
+    debug?: Debugger;
 
     /**
      * Number of profiles to keep in an LRU cache
@@ -65,7 +65,7 @@ export interface NDKCacheAdapterDexieOptions {
 }
 
 export default class NDKCacheAdapterDexie implements NDKCacheAdapter {
-    public debug: debug.Debugger;
+    public debug: Debugger;
     public locking = false;
     public ready = false;
     public profiles: CacheHandler<Profile>;

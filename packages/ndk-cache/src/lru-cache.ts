@@ -1,19 +1,20 @@
 import type { Table } from "dexie";
+import type { Debugger } from "debug";
 import { LRUCache } from "typescript-lru-cache";
 
-export type WarmUpFunction<T> = (cacheHandler: CacheHandler<T>, debug: debug.IDebugger) => Promise<void>;
+export type WarmUpFunction<T> = (cacheHandler: CacheHandler<T>, debug: Debugger) => Promise<void>;
 
 export interface CacheOptions<T> {
     maxSize: number;
     dump: (dirtyKeys: Set<string>, cache: LRUCache<string, T>) => Promise<void>;
-    debug: debug.IDebugger;
+    debug: Debugger;
 }
 
 export class CacheHandler<T> {
     private cache?: LRUCache<string, T>;
     private dirtyKeys: Set<string> = new Set();
     private options: CacheOptions<T>;
-    private debug: debug.IDebugger;
+    private debug: Debugger;
     public indexes: Map<string | number, LRUCache<string | number, Set<string>>>;
     public isSet = false;
     public maxSize = 0;

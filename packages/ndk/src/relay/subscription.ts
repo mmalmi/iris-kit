@@ -1,3 +1,4 @@
+import type { Debugger } from "debug";
 import type { NostrEvent } from "../events";
 import type {
     NDKFilter,
@@ -47,7 +48,7 @@ export class NDKRelaySubscription {
     public items: Map<NDKSubscriptionInternalId, Item> = new Map();
     public topSubManager: NDKSubscriptionManager;
 
-    public debug: debug.Debugger;
+    public debug: Debugger;
 
     /**
      * Tracks the status of this REQ.

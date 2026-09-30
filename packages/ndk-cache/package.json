@@ -1,6 +1,6 @@
 {
   "name": "ndk-cache",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "private": true,
   "description": "Dexie IndexedDB cache adapter for NDK",
@@ -21,14 +21,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@types/debug": "4.1.13",
     "debug": "4.4.3",
     "dexie": "4.4.2",
-    "ndk": "https://github.com/mmalmi/iris-kit/releases/download/runtime-v0.2.0/ndk-0.2.0.tgz",
+    "ndk": "https://github.com/mmalmi/iris-kit/releases/download/runtime-v0.2.2/ndk-0.2.1.tgz",
     "nostr-tools": "2.23.3",
     "typescript-lru-cache": "2.0.0"
   },
   "devDependencies": {
-    "@types/debug": "^4.1.12",
     "@types/node": "^22.19.8",
     "fake-indexeddb": "^6.2.4",
     "tsup": "^8.5.1",

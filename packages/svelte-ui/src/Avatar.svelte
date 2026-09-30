@@ -98,17 +98,3 @@
     class={`iris-avatar ${className} ${fallbackClass}`.trim()}
   />
 {/if}
-
-<style>
-  .iris-avatar {
-    width: var(--iris-avatar-size, 40px);
-    height: var(--iris-avatar-size, 40px);
-  }
-
-  .iris-avatar-image {
-    display: block;
-    flex: 0 0 auto;
-    border-radius: 999px;
-    object-fit: cover;
-  }
-</style>

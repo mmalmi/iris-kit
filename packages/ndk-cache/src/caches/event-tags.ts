@@ -1,4 +1,4 @@
-import type debug from "debug";
+import type { Debugger } from "debug";
 import type { Table } from "dexie";
 import type { LRUCache } from "typescript-lru-cache";
 import type { EventTag } from "../db";
@@ -13,7 +13,7 @@ export async function eventTagsWarmUp(cacheHandler: CacheHandler<EventTagCacheEn
     }
 }
 
-export const eventTagsDump = (eventTags: Table<EventTag>, debug: debug.IDebugger) => {
+export const eventTagsDump = (eventTags: Table<EventTag>, debug: Debugger) => {
     return async (dirtyKeys: Set<string>, cache: LRUCache<string, EventTagCacheEntry>) => {
         const entries = [];
 

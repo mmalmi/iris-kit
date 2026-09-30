@@ -1,4 +1,4 @@
-import debug from "debug";
+import debug, { type Debugger } from "debug";
 import { EventEmitter } from "tseep";
 
 import type { NDKEvent, NDKTag } from "../events/index.js";
@@ -154,7 +154,7 @@ export class NDKRelay extends EventEmitter<{
     public trusted = false;
 
     public complaining = false;
-    readonly debug: debug.Debugger;
+    readonly debug: Debugger;
 
     static defaultValidationRatioUpdateFn = (
         relay: NDKRelay,

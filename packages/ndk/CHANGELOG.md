@@ -1,5 +1,10 @@
 # @nostr-dev-kit/ndk
 
+## Iris 0.2.1 - 2026-07-16
+
+- Emit valid bundled declarations for NIP utility namespaces and debug logger
+  types under strict NodeNext consumers with library checks enabled.
+
 ## 3.0.3
 
 ### Patch Changes

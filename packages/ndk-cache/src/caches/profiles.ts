@@ -5,7 +5,7 @@ import type { CacheHandler } from "../lru-cache";
 
 export { db } from "../db.js";
 
-import createDebug from "debug";
+import createDebug, { type Debugger } from "debug";
 
 const d = createDebug("ndk:dexie-adapter:profiles");
 
@@ -19,7 +19,7 @@ export async function profilesWarmUp(cacheHandler: CacheHandler<Profile>, profil
     d("Loaded %d profiles from database", cacheHandler.size());
 }
 
-export const profilesDump = (profiles: Table<Profile>, debug: debug.IDebugger) => {
+export const profilesDump = (profiles: Table<Profile>, debug: Debugger) => {
     return async (dirtyKeys: Set<string>, cache: LRUCache<string, Profile>) => {
         const entries = [];
 

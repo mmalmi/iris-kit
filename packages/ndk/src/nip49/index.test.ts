@@ -1,6 +1,8 @@
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 import { describe, expect, it } from "vitest";
-import { decrypt, encrypt } from "./index.js";
+import { nip49 } from "../index.js";
+
+const { decrypt, encrypt } = nip49;
 
 describe("NIP-49 - ncryptsec", () => {
     const password = "test-password-123";

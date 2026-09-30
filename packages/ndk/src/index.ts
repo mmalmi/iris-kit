@@ -61,10 +61,10 @@ export { deserialize, type NDKEventSerialized, serialize } from "./events/serial
 export * from "./events/wrap.js";
 export type { NDKConstructorParams, NDKWalletInterface } from "./ndk/index.js";
 export { NDK as default } from "./ndk/index.js";
-// Re-export nip19 utilities for lightweight data conversion
-export * as nip19 from "./nip19/index.js";
-// Re-export nip49 utilities for private key encryption
-export * as nip49 from "./nip49/index.js";
+// Re-export lightweight NIP utilities without declaration-bundler namespace helpers.
+export { nip19 } from "nostr-tools";
+import { decrypt, encrypt } from "nostr-tools/nip49";
+export const nip49 = { decrypt, encrypt };
 export * from "./relay/auth-policies.js";
 export * from "./relay/index.js";
 export * from "./relay/sets/index.js";
