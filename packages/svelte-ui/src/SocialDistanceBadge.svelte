@@ -31,7 +31,7 @@
   let classList = $derived(`iris-social-distance-badge ${classValue} ${className}`.trim());
 
   function normalizeCount(value: number | null | undefined): number | null {
-    return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : null;
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.trunc(value) : null;
   }
 
   function socialDistanceState(
