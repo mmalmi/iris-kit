@@ -116,7 +116,7 @@
   }
 
   .iris-social-distance-badge.trusted {
-    background: #30d158;
+    background: #d4a017;
   }
 
   .iris-social-distance-badge.muted {
