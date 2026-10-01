@@ -112,19 +112,21 @@
     },
     "./contactMemory": {
       "types": "./src/contactMemory.ts",
-      "default": "./src/contactMemory.ts"
+      "default": "./dist/contactMemory.js"
     },
     "./contactMemoryStore": {
       "types": "./src/contactMemoryStore.ts",
-      "default": "./src/contactMemoryStore.ts"
+      "default": "./dist/contactMemoryStore.js"
     }
   },
   "files": [
-    "src"
+    "src",
+    "dist"
   ],
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "pnpm check && node --test src/*.test.mjs"
+    "test": "pnpm check && node --test src/*.test.mjs && node ./scripts/test-contact-memory-package.mjs",
+    "build": "node ./scripts/build-contact-memory.mjs"
   },
   "dependencies": {
     "minidenticons": "^4.2.1"

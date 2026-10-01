@@ -10,7 +10,7 @@ const runtimePackages = [
   { dir: 'ndk-cache', build: true },
   { dir: 'identity' },
   { dir: 'hashtree-app' },
-  { dir: 'svelte-ui' },
+  { dir: 'svelte-ui', build: true },
   { dir: 'release-tools' },
 ];
 const requested = new Set(process.argv.slice(3));
