@@ -101,6 +101,22 @@
     "./profile": {
       "types": "./src/profile.ts",
       "default": "./src/profile.ts"
+    },
+    "./ContactMemoryPanel.svelte": {
+      "svelte": "./src/ContactMemoryPanel.svelte",
+      "default": "./src/ContactMemoryPanel.svelte"
+    },
+    "./FavoriteStar.svelte": {
+      "svelte": "./src/FavoriteStar.svelte",
+      "default": "./src/FavoriteStar.svelte"
+    },
+    "./contactMemory": {
+      "types": "./src/contactMemory.ts",
+      "default": "./src/contactMemory.ts"
+    },
+    "./contactMemoryStore": {
+      "types": "./src/contactMemoryStore.ts",
+      "default": "./src/contactMemoryStore.ts"
     }
   },
   "files": [

@@ -13,6 +13,16 @@ Source: <https://git.iris.to/#/npub1xdhnr9mrv47kkrn95k6cwecearydeh8e895990n3acnt
 
 App-specific routing, profile fetching, badges, media behavior, and release scripts stay in the app repos unless they become broadly reusable.
 
+`@iris/svelte-ui` provides `ContactMemoryPanel`, `FavoriteStar`, and an
+account-scoped `createContactMemoryStore` adapter for private saved names and
+favorites. Its pure `contactMemory.ts` is copied from nostr-social-graph commit
+`fc3d39b` until that API is published. Public profile names remain separate;
+applications record an interaction, show the accepted name, and approve changes
+against the latest metadata. Favorites never confer social checkmarks.
+The adapter uses app-provided storage and does not synchronize between origins.
+An app may temporarily consume a committed, checksum-locked package archive
+from a verified Iris Kit commit while the next public package release is pending.
+
 ## Verification
 
 ```bash

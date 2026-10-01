@@ -9,6 +9,10 @@ export { default as IdentityRecoveryPanel } from './IdentityRecoveryPanel.svelte
 export { default as UserSettingsPanel } from './UserSettingsPanel.svelte';
 export { default as Minidenticon } from './Minidenticon.svelte';
 export { default as Name } from './Name.svelte';
+export { default as ContactMemoryPanel } from './ContactMemoryPanel.svelte';
+export { default as FavoriteStar } from './FavoriteStar.svelte';
+export * from './contactMemory';
+export * from './contactMemoryStore';
 export { default as ProxyImg } from './ProxyImg.svelte';
 export { default as SocialDistanceBadge } from './SocialDistanceBadge.svelte';
 export { default as SettingsGroup } from './SettingsGroup.svelte';
