@@ -1,3 +1,5 @@
+import { bytesToHex, randomBytes } from "@noble/hashes/utils.js";
+
 export interface NostrConnectUriParams {
     clientPubkey: string;
     relays: string[];
@@ -18,7 +20,7 @@ export interface NostrConnectOptions {
 }
 
 export function nostrConnectGenerateSecret(): string {
-    return Math.random().toString(36).substring(2, 15);
+    return bytesToHex(randomBytes(32));
 }
 
 /**
