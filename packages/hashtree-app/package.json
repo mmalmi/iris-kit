@@ -1,6 +1,6 @@
 {
   "name": "@iris/hashtree-app",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "license": "MIT",
   "type": "module",
   "description": "Shared Hashtree app runtime helpers and UI for Iris apps",
@@ -66,11 +66,11 @@
     "test": "node --test src/*.test.mjs"
   },
   "peerDependencies": {
-    "@hashtree/core": ">=0.1.8 <0.4.0",
+    "@hashtree/core": ">=0.1.8 <0.5.0",
     "svelte": "^5.0.0",
     "nostr-tools": "^2.23.0"
   },
   "devDependencies": {
-    "@hashtree/core": "https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.5.0/hashtree-core-0.3.0.tgz"
+    "@hashtree/core": "https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.5.27/hashtree-core-0.4.0.tgz"
   }
 }
