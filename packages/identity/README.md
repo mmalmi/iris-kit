@@ -28,6 +28,16 @@ The identity signer can come from:
 - `createNostrIdentitySignerFromNip46(remoteSigner)`
 - `createNostrIdentitySignerFromCustom(...)`
 
+`@iris/identity/remoteSigner` provides `connectRemoteNostrIdentitySigner` for
+`bunker://` connections over an app-owned transport. It validates replies, bounds
+requests, supports cancellation through `signal`, and accepts client metadata and
+permissions. Apps can persist their generated `clientSecretKey` together with the
+returned secret-free `connection`, then use `resume: true` to avoid replaying a
+single-use pairing secret. `switchRelays: true` negotiates the signer's preferred
+relays during pairing. Close each channel when finished and remove the saved
+client credential on sign-out. `parseBunkerConnection` validates a bunker link
+locally without network discovery.
+
 The attach helper signs an `add_facet` roster fact with the existing identity signer, signs a facet acceptance with the new AppKey, and returns the new AppKey as `npub` and `nsec`. When existing app secrets need access repair, pass `rewrapSecrets`; the hook receives the new AppKey pubkey, the signed roster op, the facet acceptance, existing roster ops, and the projected pre-attach roster.
 
 For existing identities, the signer must be an active facet with `can_admin_profile` or `can_recover_app_keys`, unless `requireSignerAuthorization` is explicitly disabled.

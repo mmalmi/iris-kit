@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { finalizeEvent, getPublicKey, nip44, verifyEvent } from 'nostr-tools';
-import { connectRemoteNostrIdentitySigner } from './remoteSigner.ts';
+import { connectRemoteNostrIdentitySigner, parseBunkerConnection } from './remoteSigner.ts';
 
 const bunkerKey = new Uint8Array(32).fill(11);
 const signingKey = new Uint8Array(32).fill(12);
@@ -10,7 +10,7 @@ const bunkerPubkey = getPublicKey(bunkerKey);
 const clientPubkey = getPublicKey(clientKey);
 const relay = 'wss://signer.example/';
 
-function remote({ silent = false, mutate = false } = {}) {
+function remote({ silent = false, mutate = false, confirmation = 'ack', auth, switched = null } = {}) {
   const listeners = new Set();
   const requests = [];
   return {
@@ -29,7 +29,8 @@ function remote({ silent = false, mutate = false } = {}) {
       requests.push(request);
       if (silent) return;
       let result;
-      if (request.method === 'connect') result = 'ack';
+      if (request.method === 'connect') result = confirmation;
+      else if (request.method === 'switch_relays') result = JSON.stringify(switched);
       else if (request.method === 'get_public_key') result = getPublicKey(signingKey);
       else if (request.method === 'sign_event') {
         const draft = JSON.parse(request.params[0]);
@@ -40,7 +41,9 @@ function remote({ silent = false, mutate = false } = {}) {
       } else throw new Error(`Unexpected method ${request.method}`);
       const response = finalizeEvent({ kind: 24133, created_at: Math.floor(Date.now() / 1000), tags: [['p', event.pubkey]],
         content: nip44.v2.encrypt(JSON.stringify({ id: request.id, result }), conversation) }, bunkerKey);
-      queueMicrotask(() => { for (const receive of listeners) receive(response); });
+      const challenge = auth && finalizeEvent({ kind: 24133, created_at: Math.floor(Date.now() / 1000), tags: [['p', event.pubkey]],
+        content: nip44.v2.encrypt(JSON.stringify({ id: request.id, result: 'auth_url', error: auth }), conversation) }, bunkerKey);
+      queueMicrotask(() => { for (const receive of listeners) { if (challenge) receive(challenge); receive(response); } });
     },
   };
 }
@@ -73,4 +76,62 @@ test('remote recovery times out and releases the response subscription', async (
   const transport = remote({ silent: true });
   await assert.rejects(connectRemoteNostrIdentitySigner({ ...options(transport), timeoutMs: 20 }), /did not respond/);
   assert.equal(transport.listeners.size, 0);
+});
+
+test('bunker links validate the key and relay scope without network discovery', () => {
+  assert.deepEqual(parseBunkerConnection(options(remote()).connection), {pubkey:bunkerPubkey, relays:[relay], secret:'session-secret'});
+  for (const input of ['person@example.com', `bunker://${bunkerPubkey}`, `bunker://${bunkerPubkey}/other?relay=${relay}`,
+    `bunker://${bunkerPubkey}?relay=https://example.com`, `bunker://${bunkerPubkey}?relay=wss://user:password@example.com`,
+    `bunker://${bunkerPubkey}?relay=${relay}#fragment`]) assert.throws(() => parseBunkerConnection(input));
+});
+
+test('pairing sends permissions and metadata and returns a secret-free resumable connection', async () => {
+  const transport = remote({confirmation:'session-secret'});
+  const signer = await connectRemoteNostrIdentitySigner({...options(transport), permissions:'sign_event', clientMetadata:{name:'Example'}, switchRelays:true});
+  assert.deepEqual(transport.requests[0].params, [bunkerPubkey, 'session-secret', 'sign_event', '{"name":"Example"}']);
+  assert.equal(signer.connection.includes('secret'), false);
+  const saved = signer.connection;
+  await signer.close();
+  const restoredTransport = remote();
+  const restored = await connectRemoteNostrIdentitySigner({...options(restoredTransport), connection:saved, resume:true});
+  assert.deepEqual(restoredTransport.requests.map(request => request.method), ['get_public_key']);
+  await restored.signEvent({kind:1, content:'after reload', tags:[], created_at:100});
+  await restored.close();
+  assert.equal(clientKey[0], 13, 'closing must not wipe the caller-owned persistence key');
+});
+
+test('pairing rejects an unexpected confirmation and invalid switched relays', async () => {
+  for (const transport of [remote({confirmation:'wrong secret'}), remote({switched:['https://example.com']})]) {
+    await assert.rejects(connectRemoteNostrIdentitySigner({...options(transport), switchRelays:true}));
+    assert.equal(transport.listeners.size, 0);
+  }
+});
+
+test('cancelling a pending pairing releases subscriptions immediately', async () => {
+  const transport = remote({silent:true}), controller = new AbortController();
+  const pending = connectRemoteNostrIdentitySigner({...options(transport), signal:controller.signal});
+  controller.abort();
+  await assert.rejects(pending);
+  assert.equal(transport.listeners.size, 0);
+});
+
+test('closing interrupts pending signing requests, and already-aborted calls never subscribe', async () => {
+  const transport = remote();
+  const signer = await connectRemoteNostrIdentitySigner(options(transport));
+  transport.publish = async () => {};
+  const pending = signer.signEvent({kind:1, content:'pending', tags:[], created_at:100});
+  await signer.close();
+  await assert.rejects(pending, /closed/);
+  const controller = new AbortController(); controller.abort();
+  await assert.rejects(connectRemoteNostrIdentitySigner({...options(transport), signal:controller.signal}));
+  assert.equal(transport.listeners.size, 0);
+});
+
+test('only safe authorization links reach the caller', async () => {
+  for (const auth of ['javascript:alert(1)', 'https://user:pass@example.com', 'https://signer.example/approve']) {
+    const links = [], transport = remote({auth});
+    const signer = await connectRemoteNostrIdentitySigner({...options(transport), onAuth:url => links.push(url)});
+    assert.equal(links.length > 0, auth === 'https://signer.example/approve');
+    await signer.close();
+  }
 });
