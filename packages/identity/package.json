@@ -63,6 +63,6 @@
     "nostr-social-graph": "*"
   },
   "devDependencies": {
-    "nostr-social-graph": "https://github.com/mmalmi/nostr-social-graph/releases/download/v4.0.3/nostr-social-graph-4.0.3.tgz"
+    "nostr-social-graph": "https://github.com/mmalmi/nostr-social-graph/releases/download/v4.1.0/nostr-social-graph-4.1.0.tgz"
   }
 }
