@@ -1,6 +1,6 @@
 {
   "name": "@iris/identity",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "license": "MIT",
   "type": "module",
   "description": "Shared NostrIdentity identity and device-approval bootstrap helpers",
@@ -48,6 +48,10 @@
     "./remoteSigner": {
       "types": "./src/remoteSigner.ts",
       "default": "./src/remoteSigner.ts"
+    },
+    "./browserSigner": {
+      "types": "./src/browserSigner.ts",
+      "default": "./src/browserSigner.ts"
     }
   },
   "files": [
@@ -63,6 +67,7 @@
     "nostr-social-graph": "*"
   },
   "devDependencies": {
-    "nostr-social-graph": "https://github.com/mmalmi/nostr-social-graph/releases/download/v4.1.0/nostr-social-graph-4.1.0.tgz"
+    "nostr-social-graph": "https://github.com/mmalmi/nostr-social-graph/releases/download/v4.1.0/nostr-social-graph-4.1.0.tgz",
+    "ws": "8.22.0"
   }
 }
