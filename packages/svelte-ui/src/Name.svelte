@@ -41,6 +41,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    /* A clipped inline box sits on its bottom edge, not its text: keep it level with the words around it. */
+    vertical-align: bottom;
   }
 
   .iris-identity-name-fallback {
