@@ -8,6 +8,7 @@ export {
   DEFAULT_HISTORY_RELAYS,
   DEFAULT_PUBLIC_RELAYS,
   DEFAULT_TREE_ROOT_RELAYS,
+  RETIRED_PUBLIC_RELAYS,
 } from './defaultRelays';
 export {
   applyDefaultIgnoreFilter,

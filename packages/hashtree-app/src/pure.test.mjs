@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_PUBLIC_RELAYS, DEFAULT_TREE_ROOT_RELAYS, DEFAULT_HISTORY_RELAYS, DEFAULT_E2E_PRODUCTION_RELAYS } from './defaultRelays.ts';
+import { DEFAULT_PUBLIC_RELAYS, DEFAULT_TREE_ROOT_RELAYS, DEFAULT_HISTORY_RELAYS, DEFAULT_E2E_PRODUCTION_RELAYS, RETIRED_PUBLIC_RELAYS } from './defaultRelays.ts';
 import { getFileIcon } from './fileIcon.ts';
 import { filterByGitignore, parseGitignore } from './gitignore.ts';
 import { resolvePublishLabels } from './publishLabels.ts';
@@ -11,13 +11,15 @@ test('public relay defaults prioritize Ditto and preserve the existing relay ord
     'wss://relay.ditto.pub',
     'wss://relay.damus.io',
     'wss://relay.primal.net',
-    'wss://relay.nostr.band',
     'wss://relay.snort.social',
     'wss://temp.iris.to',
   ];
   for (const relays of [DEFAULT_PUBLIC_RELAYS, DEFAULT_TREE_ROOT_RELAYS, DEFAULT_HISTORY_RELAYS, DEFAULT_E2E_PRODUCTION_RELAYS]) {
     assert.deepEqual(relays, expected);
   }
+  // A relay that stopped answering is not shipped, and is named so apps can recognise older saved lists.
+  assert.deepEqual(RETIRED_PUBLIC_RELAYS, ['wss://relay.nostr.band']);
+  for (const retired of RETIRED_PUBLIC_RELAYS) assert.equal(expected.includes(retired), false);
   // Callers may customize their own arrays without changing another consumer's defaults.
   assert.notEqual(DEFAULT_PUBLIC_RELAYS, DEFAULT_TREE_ROOT_RELAYS);
   assert.notEqual(DEFAULT_PUBLIC_RELAYS, DEFAULT_HISTORY_RELAYS);
