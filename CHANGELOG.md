@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Remove `wss://relay.nostr.band` from the default relay lists of
+## Runtime 0.2.10 - 2026-11-11
+
+- Release `@iris/hashtree-app@0.1.8`: remove `wss://relay.nostr.band` from the default relay lists of
   `@iris/hashtree-app`: it no longer accepts connections, so every app start
   spent a connection attempt on it. `RETIRED_PUBLIC_RELAYS` names it for apps
   that compare a viewer's saved relay list with the shipped set.
