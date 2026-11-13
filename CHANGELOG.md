@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## Runtime 0.2.11 - 2026-11-13
+
+- Release `@iris/svelte-ui@0.1.3`: private contact memory (`ContactMemoryPanel`,
+  `FavoriteStar`, `createContactMemoryStore`) with Node and browser helpers,
+  gold trusted social badges, and clipped names that stay level with
+  surrounding text. Other runtime packages are unchanged.
+
 ## Runtime 0.2.10 - 2026-11-11
 
 - Release `@iris/hashtree-app@0.1.8`: remove `wss://relay.nostr.band` from the default relay lists of
