@@ -21,3 +21,9 @@ test('settings layout preserves legacy network route mappings', () => {
   assert.match(source, /path\.startsWith\('\/settings\/network\/p2p'\)/);
   assert.match(source, /navigate\(`\/settings\/\$\{id\}`\)/);
 });
+
+test('sign out is an optional action on the Settings landing', () => {
+  assert.match(source, /onSignOut\?: \(\) => void \| Promise<void>/);
+  assert.match(source, /\{#if isSettingsRootRoute && onSignOut\}[\s\S]*?onclick=\{signOut\}/);
+  assert.match(source, /await onSignOut\(\)/);
+});

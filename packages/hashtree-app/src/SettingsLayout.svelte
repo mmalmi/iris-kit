@@ -10,6 +10,7 @@
     navigate: (path: string) => void;
     appSettings: SettingsPanel;
     profileSettings?: SettingsPanel;
+    onSignOut?: () => void | Promise<void>;
     storageSettings: SettingsPanel;
     trafficSettings: EmbeddedSettingsPanel;
     serversSettings: EmbeddedSettingsPanel;
@@ -21,6 +22,7 @@
     navigate,
     appSettings: AppSettings,
     profileSettings: ProfileSettings,
+    onSignOut,
     storageSettings: StorageSettings,
     trafficSettings: TransportUsageSettings,
     serversSettings: ServersSettings,
@@ -97,6 +99,22 @@
     navigate('/settings');
   }
 
+  let signingOut = $state(false);
+  let signOutError = $state(false);
+
+  async function signOut() {
+    if (!onSignOut || signingOut) return;
+    signingOut = true;
+    signOutError = false;
+    try {
+      await onSignOut();
+    } catch {
+      signOutError = true;
+    } finally {
+      signingOut = false;
+    }
+  }
+
   let activeTab = $derived.by((): TabId => {
     const path = currentPath;
     if (path === '/settings') return DEFAULT_TAB;
@@ -145,6 +163,23 @@
           </button>
         {/each}
       </div>
+
+      {#if isSettingsRootRoute && onSignOut}
+        <button
+          type="button"
+          class="mt-4 flex w-full items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 text-left text-sm font-medium text-text-1 ring-1 ring-surface-3/80 hover:bg-surface-3/40"
+          disabled={signingOut}
+          onclick={signOut}
+        >
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-3 text-text-2">
+            <span class="i-lucide-log-out" aria-hidden="true"></span>
+          </span>
+          {signingOut ? 'Signing out…' : 'Sign out'}
+        </button>
+        {#if signOutError}
+          <p class="mt-3 text-sm text-text-2" role="alert">Could not sign out. Try again.</p>
+        {/if}
+      {/if}
     </div>
   </aside>
 
