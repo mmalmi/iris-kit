@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 export function cloneValues(values) {
@@ -49,12 +49,40 @@ export function workerAssetsDeployCommand(profile, options, wranglerVersion) {
   );
 }
 
+
+export function createNativeReleaseCommand({
+  distDir,
+  treeName,
+  resolveHtreeCommand,
+  dryRun = false,
+  gatePath = process.env.IRIS_NATIVE_RELEASE_GATE,
+  entries = [],
+  legacyKeys = false,
+  unencrypted = false,
+}) {
+  const gate = gatePath || '$IRIS_NATIVE_RELEASE_GATE';
+  if (!dryRun && (!path.isAbsolute(gate) || !statSync(gate, { throwIfNoEntry: false })?.isFile())) {
+    throw new Error('Set IRIS_NATIVE_RELEASE_GATE to the absolute path of the native Iris Drive release runner');
+  }
+  const [publisher, ...args] = resolveHtreeCommand();
+  if (!dryRun && (!publisher || args.length !== 0)) {
+    throw new Error('Set HTREE_BIN to an installed Hashtree CLI executable for native release verification');
+  }
+  const htree = publisher && args.length === 0 ? publisher : '$HTREE_BIN';
+  const command = [process.execPath, gate, '--dist', distDir, '--tree', treeName, '--htree', htree];
+  for (const entry of entries) command.push('--entry', entry);
+  if (legacyKeys) command.push('--legacy-keys');
+  if (unencrypted) command.push('--unencrypted');
+  return command;
+}
+
 export function createReleasePlan({
   appDir,
   options,
   profile,
   resolveHtreeCommand,
   wranglerVersion,
+  nativeReleaseGatePath,
 }) {
   if (options.workerName && options.branch) {
     throw new Error('--branch is only supported for Pages deployments');
@@ -81,8 +109,18 @@ export function createReleasePlan({
     })),
     {
       id: 'publish',
-      label: `Publish ${profile.appName} to hashtree`,
-      command: resolveHtreeCommand('add', '.', '--publish', options.treeName),
+      label: profile.nativeReleaseGate
+        ? `Verify and publish ${profile.appName} through native Iris Drive`
+        : `Publish ${profile.appName} to hashtree`,
+      command: profile.nativeReleaseGate
+        ? createNativeReleaseCommand({
+            distDir,
+            treeName: options.treeName,
+            resolveHtreeCommand,
+            dryRun: options.dryRun,
+            gatePath: nativeReleaseGatePath,
+          })
+        : resolveHtreeCommand('add', '.', '--publish', options.treeName),
       cwd: distDir,
     },
   ];
@@ -123,7 +161,7 @@ export function createReleasePlan({
     profile,
     distDir,
     steps,
-    htreePushCommand: resolveHtreeCommand('push'),
+    ...(profile.nativeReleaseGate ? {} : { htreePushCommand: resolveHtreeCommand('push') }),
   };
 }
 
@@ -232,6 +270,15 @@ export function parsePublishOutput(output) {
   };
 }
 
+export function parseNativeReleaseOutput(output, treeName) {
+  const publish = parsePublishOutput(output);
+  const slash = publish.publishedRef.indexOf('/');
+  if (slash <= 0 || publish.publishedRef.slice(slash + 1) !== treeName) {
+    throw new Error(`Native release did not promote the live Hashtree tree ${treeName}`);
+  }
+  return publish;
+}
+
 export function parseDeployOutputUrl(output) {
   const deployUrlMatch = output.match(/https:\/\/[^\s]+(?:\.pages\.dev|\.workers\.dev)(?:\/[^\s]*)?/i);
   return deployUrlMatch ? deployUrlMatch[0] : null;
@@ -254,36 +301,10 @@ function hasFileServerErrors(result) {
   return /file server push failed/i.test(output) || hasNonzeroErrorCount;
 }
 
-export async function runReleasePlan(
-  options,
-  plan,
-  runner = defaultRunner,
-  hooks = {},
-) {
-  const buildOutputExists = hooks.buildOutputExists ?? existsSync;
-
-  if (options.dryRun) {
-    return {
-      dryRun: true,
-      profile: plan.profile,
-      steps: plan.steps,
-    };
-  }
-
+async function runParallelReleaseSteps(plan, releaseSteps, runner) {
   let publishOutput = '';
   let publishNeedsPush = false;
   let deployOutput = '';
-  const prereleaseSteps = plan.steps.filter((step) => !isReleaseStep(step));
-  const releaseSteps = plan.steps.filter(isReleaseStep);
-
-  for (const step of prereleaseSteps) {
-    const result = await runner(step);
-    assertStepSucceeded(step, result);
-    if (step.id === 'build') {
-      ensureDistExists(plan.distDir, buildOutputExists);
-    }
-  }
-
   const releaseResults = await Promise.allSettled(
     releaseSteps.map((step) => Promise.resolve().then(() => runner(step))),
   );
@@ -318,6 +339,58 @@ export async function runReleasePlan(
       throw new Error(`${pushStep.label} completed with file-server errors`);
     }
   }
+
+  return { publish, deployOutput };
+}
+
+async function runNativeGatedReleaseSteps(options, releaseSteps, runner) {
+  const publishStep = releaseSteps.find(step => step.id === 'publish');
+  const result = await runner(publishStep);
+  assertStepSucceeded(publishStep, result);
+  const publish = parseNativeReleaseOutput(`${result.stdout}
+${result.stderr}`, options.treeName);
+
+  const deployStep = releaseSteps.find(step => step.id === 'deploy');
+  let deployOutput = '';
+  if (deployStep) {
+    const deployment = await runner(deployStep);
+    assertStepSucceeded(deployStep, deployment);
+    deployOutput = `${deployment.stdout}
+${deployment.stderr}`;
+  }
+  return { publish, deployOutput };
+}
+
+export async function runReleasePlan(
+  options,
+  plan,
+  runner = defaultRunner,
+  hooks = {},
+) {
+  const buildOutputExists = hooks.buildOutputExists ?? existsSync;
+
+  if (options.dryRun) {
+    return {
+      dryRun: true,
+      profile: plan.profile,
+      steps: plan.steps,
+    };
+  }
+
+  const prereleaseSteps = plan.steps.filter((step) => !isReleaseStep(step));
+  const releaseSteps = plan.steps.filter(isReleaseStep);
+
+  for (const step of prereleaseSteps) {
+    const result = await runner(step);
+    assertStepSucceeded(step, result);
+    if (step.id === 'build') {
+      ensureDistExists(plan.distDir, buildOutputExists);
+    }
+  }
+
+  const { publish, deployOutput } = plan.profile.nativeReleaseGate
+    ? await runNativeGatedReleaseSteps(options, releaseSteps, runner)
+    : await runParallelReleaseSteps(plan, releaseSteps, runner);
 
   return {
     profile: plan.profile,

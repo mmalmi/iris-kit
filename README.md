@@ -23,6 +23,15 @@ The adapter uses app-provided storage and does not synchronize between origins.
 An app may temporarily consume a committed, checksum-locked package archive
 from a verified Iris Kit commit while the next public package release is pending.
 
+## Native web releases
+
+Launcher-facing release profiles set `nativeReleaseGate: true`. Set
+`IRIS_NATIVE_RELEASE_GATE` to the absolute path of the approved Iris Sites
+release runner. Set `HTREE_BIN` to an installed Hashtree CLI executable when
+a repository normally publishes through Cargo. A gated release finishes its
+standard build and test steps, verifies and promotes through the native runner,
+then deploys the same output to its Cloudflare target when configured.
+
 ## Verification
 
 ```bash

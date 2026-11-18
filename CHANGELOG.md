@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## Runtime 0.2.12 - 2026-11-18
+
+- Release `@iris/release-tools@0.1.2` with an opt-in native Iris Drive
+  release gate. A gated profile verifies and promotes its Hashtree build
+  before deploying the same build to Cloudflare.
+
 ## Runtime 0.2.11 - 2026-11-13
 
 - Release `@iris/svelte-ui@0.1.3`: private contact memory (`ContactMemoryPanel`,
