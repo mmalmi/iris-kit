@@ -1,5 +1,9 @@
 # Changelog
 
+## runtime-v0.2.17
+
+- Release `@iris/hashtree-app` 0.1.11 and `@iris/svelte-ui` 0.1.6 with profile wording in shared settings, the profile switcher, and profile editing errors.
+
 ## runtime-v0.2.16
 
 - Release @iris/svelte-ui 0.1.5 and @iris/hashtree-app 0.1.10. The shared profile editor displays, compares and signs exact JSON numbers, including values nested in arrays and objects.
