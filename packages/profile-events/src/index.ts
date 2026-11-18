@@ -1,3 +1,8 @@
+import { equalJsonValues, equalValue, validateJsonValue } from './rawJson.js';
+export { equalJsonValues, validateJsonValue } from './rawJson.js';
+
+export type RawProfileFields = Readonly<Record<string, string>>;
+export type RawProfileEdits = Readonly<Record<string, string | undefined>>;
 /** Callers establish the event's signature, kind, author and freshness before editing. */
 type EventData = { content: string; tags: readonly (readonly string[])[] };
 type ProfileBase = EventData & { created_at: number };
@@ -35,6 +40,21 @@ function rawMembers(content: string): Map<string, string> {
   return fields;
 }
 
+/** Each property is its original JSON source, including quotes around string values. */
+export function readRawProfileFields(content: string): Record<string, string> {
+  const checked = validateJsonValue(content);
+  if (!checked.startsWith('{')) throw Error('Profile metadata must be a JSON object.');
+  const fields: Record<string, string> = Object.create(null);
+  for (const [key, raw] of rawMembers(checked)) fields[key] = raw;
+  return fields;
+}
+
+/** Format a raw field map for an object editor without interpreting its value tokens. */
+export function formatRawProfileFields(fields: RawProfileFields): string {
+  const rows = Object.entries(fields).map(([key, raw]) => '  ' + JSON.stringify(key) + ': ' + validateJsonValue(raw));
+  return rows.length ? '{\n' + rows.join(',\n') + '\n}' : '{}';
+}
+
 function encodeValue(value: unknown): string {
   return JSON.stringify(value, (_key, part: unknown) => {
     if (part === undefined || typeof part === 'function' || typeof part === 'symbol'
@@ -50,23 +70,30 @@ export function buildProfileDraft(
   edits: Readonly<Record<string, unknown>>,
   now = Math.floor(Date.now() / 1000),
 ): { kind: 0; content: string; tags: string[][]; created_at: number } {
+  const raw: Record<string, string | undefined> = Object.create(null);
+  for (const [key, value] of Object.entries(edits)) raw[key] = value === undefined ? undefined : encodeValue(value);
+  return buildRawProfileDraft(base, raw, now);
+}
+
+export function buildRawProfileDraft(base: ProfileBase | null, edits: RawProfileEdits, now = Math.floor(Date.now() / 1000)) {
   if (!Number.isSafeInteger(now) || now < 0 || (base &&
     (!Number.isSafeInteger(base.created_at) || base.created_at < 0 || base.created_at === Number.MAX_SAFE_INTEGER))) {
     throw new Error('Invalid profile timestamp.');
   }
   const content = base?.content ?? '{}';
-  const fields = readProfileFields(content);
-  const members = rawMembers(content);
+  const fields = readRawProfileFields(content);
+  const members = new Map(Object.entries(fields));
   for (const [key, value] of Object.entries(edits)) {
     if (value === undefined) members.delete(key);
-    else members.set(key, encodeValue(value));
+    else members.set(key, validateJsonValue(value));
   }
   // NIP-92: discard attachment metadata only when the corresponding profile
   // image actually goes away, including when picture and banner share a URL.
-  const removedImages = new Set([fields.picture, fields.banner].filter(url => typeof url === 'string'));
+  const image = (raw?: string): string | undefined => raw?.startsWith('"') ? JSON.parse(raw) : undefined;
+  const removedImages = new Set([image(fields.picture), image(fields.banner)].filter(url => url !== undefined));
   for (const key of ['picture', 'banner']) {
-    const url = Object.hasOwn(edits, key) ? edits[key] : fields[key];
-    if (typeof url === 'string') removedImages.delete(url);
+    const url = image(members.get(key));
+    if (url !== undefined) removedImages.delete(url);
   }
   const tags = (base?.tags ?? []).filter(tag => {
     if (tag[0] !== 'imeta' || removedImages.size === 0) return true;
@@ -74,7 +101,7 @@ export function buildProfileDraft(
     return !url || !removedImages.has(url.slice(4));
   }).map(tag => [...tag]);
   const entries = Array.from(members, ([key, raw]) => JSON.stringify(key) + ':' + raw);
-  return { kind: 0, content: '{' + entries.join(',') + '}', tags, created_at: Math.max(now, (base?.created_at ?? -1) + 1) };
+  return { kind: 0 as const, content: '{' + entries.join(',') + '}', tags, created_at: Math.max(now, (base?.created_at ?? -1) + 1) };
 }
 
 type Tags = EventData['tags'];
@@ -102,18 +129,6 @@ function tagChanges(before: Tags, after: Tags) {
   return { tagsAdded, tagsRemoved, tagsReordered };
 }
 
-// Object property order does not change a JSON value. Array order does.
-function equalValue(left: unknown, right: unknown): boolean {
-  if (left === right) return true;
-  if (!left || !right || typeof left !== 'object' || typeof right !== 'object'
-    || Array.isArray(left) !== Array.isArray(right)) return false;
-  const first = left as Record<string, unknown>;
-  const second = right as Record<string, unknown>;
-  const keys = Object.keys(first);
-  return keys.length === Object.keys(second).length &&
-    keys.every(key => Object.hasOwn(second, key) && equalValue(first[key], second[key]));
-}
-
 type Fields = Readonly<Record<string, unknown>>;
 
 export function diffProfileFields(before: Fields, after: Fields): Record<string, unknown> {
@@ -134,6 +149,27 @@ export function conflictingProfileFields(base: Fields, latest: Fields, edits: Fi
   });
 }
 
+export function diffRawProfileFields(before: RawProfileFields, after: RawProfileFields): Record<string, string | undefined> {
+  const edits: Record<string, string | undefined> = Object.create(null);
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (!Object.hasOwn(after, key)) edits[key] = undefined;
+    else if (!Object.hasOwn(before, key) || !equalJsonValues(before[key], after[key])) edits[key] = validateJsonValue(after[key]);
+  }
+  return edits;
+}
+
+function equalOptionalRaw(left: string | undefined, right: string | undefined): boolean {
+  return left === undefined || right === undefined ? left === right : equalJsonValues(left, right);
+}
+
+export function conflictingRawProfileFields(base: RawProfileFields, latest: RawProfileFields, edits: RawProfileEdits): string[] {
+  return Object.keys(edits).filter(key => {
+    const previous = Object.hasOwn(base, key) ? base[key] : undefined;
+    const current = Object.hasOwn(latest, key) ? latest[key] : undefined;
+    return !equalOptionalRaw(current, previous) && !equalOptionalRaw(current, edits[key]);
+  });
+}
+
 function populated(value: unknown): boolean {
   if (value == null) return false;
   if (typeof value === 'string') return value.trim().length > 0;
@@ -141,27 +177,37 @@ function populated(value: unknown): boolean {
   return true;
 }
 
-type FieldChange = { key: string; before?: unknown; after?: unknown };
+type RawFieldChange = { key: string; before?: string; after?: string };
 
-export function compareProfileEvents(before: EventData, after: EventData) {
-  const previous = readProfileFields(before.content);
-  const next = readProfileFields(after.content);
-  const fields: FieldChange[] = [];
+export function compareRawProfileEvents(before: EventData, after: EventData) {
+  const previous = readRawProfileFields(before.content);
+  const next = readRawProfileFields(after.content);
+  const fields: RawFieldChange[] = [];
+  const filled = (raw: string) => populated(JSON.parse(raw));
   const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
   let removed = 0;
   for (const key of keys) {
     const had = Object.hasOwn(previous, key);
     const has = Object.hasOwn(next, key);
-    if (had && has && equalValue(previous[key], next[key])) continue;
+    if (had && has && equalJsonValues(previous[key], next[key])) continue;
     fields.push({ key, ...(had && { before: previous[key] }), ...(has && { after: next[key] }) });
-    if (had && populated(previous[key]) && (!has || !populated(next[key]))) removed++;
+    if (had && filled(previous[key]) && (!has || !filled(next[key]))) removed++;
   }
-  const previousSize = Object.values(previous).filter(populated).length;
+  const previousSize = Object.values(previous).filter(filled).length;
   const tagDiff = tagChanges(before.tags, after.tags);
-  const massRemoval = (removed > 0 && Object.values(next).every(value => !populated(value))) ||
+  const massRemoval = (removed > 0 && Object.values(next).every(value => !filled(value))) ||
     (removed >= 3 && removed * 2 >= previousSize) ||
     (tagDiff.tagsRemoved.length >= 3 && tagDiff.tagsRemoved.length * 2 >= before.tags.length);
   return { fields, ...tagDiff, massRemoval };
+}
+
+/** Legacy display values use JS types. Prefer compareRawProfileEvents for exact number text. */
+export function compareProfileEvents(before: EventData, after: EventData) {
+  const summary = compareRawProfileEvents(before, after);
+  return {...summary, fields: summary.fields.map(({key, before, after}) => ({
+    key, ...(before !== undefined && {before: JSON.parse(before) as unknown}),
+    ...(after !== undefined && {after: JSON.parse(after) as unknown}),
+  }))};
 }
 
 function splitFollowTags(tags: Tags) {

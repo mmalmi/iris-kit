@@ -1,5 +1,9 @@
 # Changelog
 
+## runtime-v0.2.15
+
+- Release @iris/profile-events 0.2.0 with exact JSON value editing, comparisons and conflict checks for public profile fields.
+
 ## Unreleased
 
 ## Runtime 0.2.14 - 2026-11-18

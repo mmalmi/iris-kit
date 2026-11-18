@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildProfileDraft, compareFollowEvents, compareProfileEvents, conflictingProfileFields,
-  diffProfileFields, readProfileFields,
+  diffProfileFields, readProfileFields, buildRawProfileDraft, compareRawProfileEvents, conflictingRawProfileFields,
+  diffRawProfileFields, equalJsonValues, formatRawProfileFields, readRawProfileFields, validateJsonValue,
 } from './dist/index.js';
 
 const profile = (content = '{}', tags = []) => ({content, tags, created_at: 15});
@@ -91,4 +92,40 @@ test('warns for a complete follow wipe or at least ten people and half of the li
   assert.equal(drop(40), true);
   assert.equal(compareFollowEvents(profile('',[['p',key(1)]]), profile('')).massRemoval, true);
   assert.equal(compareFollowEvents(profile(''), profile('')).massRemoval, false);
+});
+
+test('text, edit, compare and rebase preserve exact signed numeric tokens', () => {
+  const content = '{"n":9007199254740995,"nested":{"a":[1.00000000000000000000001,1e-9999]},"s":"9007199254740995"}';
+  const fresh = readRawProfileFields(content);
+  assert.equal(fresh.n, '9007199254740995');
+  assert.deepEqual(readRawProfileFields(formatRawProfileFields(fresh)), fresh);
+  assert.equal(formatRawProfileFields({}), '{}');
+  const edits = {n: '9007199254740996', nested: '{"a":[1.00000000000000000000002,1e-9998]}', new: '-12.345678901234567891234567899e+123456', s: '9007199254740995'};
+  const draft = buildRawProfileDraft(profile(content), edits);
+  const after = readRawProfileFields(draft.content);
+  assert.deepEqual({...diffRawProfileFields(fresh, after)}, edits);
+  assert.deepEqual(compareRawProfileEvents(profile(content),draft).fields.map(f=>[f.key,f.before,f.after]), [
+    ['n',fresh.n,edits.n],['nested',fresh.nested,edits.nested],['s',fresh.s,edits.s],['new',undefined,edits.new],
+  ]);
+  assert.deepEqual(conflictingRawProfileFields(fresh, {...fresh,n:'9007199254740994'}, edits), ['n']);
+  assert.deepEqual(conflictingRawProfileFields(fresh, {...fresh,n:edits.n}, edits), []);
+  assert.deepEqual(conflictingRawProfileFields(fresh, {...fresh,unknown:'0'}, edits), []);
+  assert.equal(readRawProfileFields(buildRawProfileDraft(profile(content),{s:'"text"'}).content).nested, fresh.nested);
+});
+
+test('exact comparisons distinguish colliding doubles, underflow, overflow, type and ordering', () => {
+  for (const [left,right] of [
+    ['9007199254740995','9007199254740996'], ['1e-999999','2e-999999'], ['1e+12345','2e+12345'],
+    ['1.0000000000000000000001','1.0000000000000000000002'], ['"n1e0"','1'], ['"123"','123'],
+    ['[1,2]','[2,1]'], ['{"__proto__":1}','{}'], ['-1e-88','1e-88'],
+  ]) assert.equal(equalJsonValues(left,right), false, left);
+  for (const [left,right] of [
+    ['{"z":0,"a":[1.00,true]}','{"a":[1e0,true],"z":-0}'], ['1E+999999','10e999998'],
+    ['-0.01200','-12e-3'],['"\\u0061"','"a"'],['-0.000e-222','0'],
+  ]) assert.equal(equalJsonValues(left,right), true, left);
+  for (const raw of ['NaN','+2','1e','{','{"x":2,"x":3}','{"deep":[{"x":0,"\\u0078":1}]}']) {
+    assert.throws(()=>validateJsonValue(raw));
+    assert.throws(()=>buildRawProfileDraft(null,{value:raw}));
+  }
+  for (const raw of ['[1]','null','""']) assert.throws(()=>readRawProfileFields(raw));
 });

@@ -32,6 +32,14 @@ Apps using `AppNostrClient` can call `readOwnProfileHead(client, pubkey)` and
 return `saveOwnProfileEdits(client, pubkey, base, edits)` from that callback.
 Both functions are exported from `@iris/hashtree-app/profileEdits`.
 
+For numeric JSON fields, use the raw profile helpers from `@iris/profile-events`.
+`readRawProfileFields(content)` returns each field's original JSON text, including
+quotes around strings. Edit those values and use `diffRawProfileFields`,
+`conflictingRawProfileFields`, and `buildRawProfileDraft` to compare, rebase
+and sign them without numeric conversion. An undefined edit removes the field.
+`formatRawProfileFields` formats the full object for a text editor.
+`compareRawProfileEvents` returns the exact previous and next text in its field changes.
+
 ## Native web releases
 
 Launcher-facing release profiles set `nativeReleaseGate: true`. Set
