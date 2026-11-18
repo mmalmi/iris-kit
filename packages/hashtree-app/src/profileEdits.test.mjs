@@ -85,3 +85,24 @@ test('only a successful durable queue or remote acceptance can acknowledge publi
   const saved=await saveOwnProfileEdits(f.client,f.pubkey,null,{name:'Fixture'});
   assert.equal((await readOwnProfileHead(f.client,f.pubkey)).id,saved.id);
 });
+
+test('a scoped completed query can supply the head while the broad subscription remains partial', async()=>{
+  const f=fixture(), base=f.sign({name:'old'},5);
+  f.settings.complete=false;
+  let complete=true;
+  const options={query:async()=>({events:[base],complete})};
+  assert.equal((await readOwnProfileHead(f.client,f.pubkey,options)).id,base.id);
+  complete=false;
+  assert.equal((await readOwnProfileHead(f.client,f.pubkey,options)).id,base.id);
+  await assert.rejects(saveOwnProfileEdits(f.client,f.pubkey,base,{about:'edit'},options),/incomplete/);
+  complete=true;
+  assert.equal(JSON.parse((await saveOwnProfileEdits(f.client,f.pubkey,base,{about:'edit'},options)).content).about,'edit');
+});
+
+test('a newer remote head found by the post-sign query cancels the old replacement', async()=>{
+  const f=fixture(), initial=f.sign({name:'old'},5), latest=f.sign({name:'new'},8);
+  let reads=0;
+  const options={query:async()=>({events:[++reads===1?initial:latest],complete:true})};
+  await assert.rejects(saveOwnProfileEdits(f.client,f.pubkey,initial,{about:'edit'},options),/during signing/);
+  assert.equal(f.published.length,0);
+});

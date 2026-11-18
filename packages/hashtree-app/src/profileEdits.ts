@@ -21,40 +21,55 @@ function newer(candidate: Event, head: Event | null): boolean {
     (candidate.created_at === head.created_at && candidate.id < head.id);
 }
 
-function observe(client: ProfileClient, pubkey: string, base: Event | null = null, timeoutMs = 8000) {
+export interface ProfileReadOptions {
+  /** Query only the account's configured sources. A complete empty result permits creation. */
+  query?: (pubkey: string) => Promise<{events: Iterable<Event>; complete: boolean}>;
+  timeoutMs?: number;
+}
+
+function observe(client: ProfileClient, pubkey: string, base: Event | null, options: ProfileReadOptions, writing: boolean) {
   if (!/^[a-f0-9]{64}$/.test(pubkey)) throw Error('Invalid profile owner.');
   let head = base;
   const local = accepted.get(client);
   if (local?.pubkey === pubkey && newer(local, head)) head = local;
   let invalid = false;
+  const receive = (event: Event) => {
+    if (event?.kind !== 0 || event.pubkey !== pubkey) return;
+    const verified = verifiedProfile(event, pubkey);
+    if (!verified) invalid = true;
+    else if (newer(verified, head)) head = verified;
+  };
   const sub = client.subscribe({kinds: [0], authors: [pubkey], limit: 1});
+  sub.on('event', receive);
+  const refresh = async () => {
+    if (!options.query) return;
+    const report = await options.query(pubkey);
+    for (const event of report.events) receive(event);
+    if (!report.complete || (invalid && !head)) throw Error('Profile history is incomplete. Try again when connected.');
+  };
   const ready = new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(Error('Profile history is incomplete. Try again when connected.')), timeoutMs);
-    sub.on('event', event => {
-      if (event.kind !== 0 || event.pubkey !== pubkey) return;
-      const verified = verifiedProfile(event, pubkey);
-      if (!verified) invalid = true;
-      else if (newer(verified, head)) head = verified;
-    });
-    sub.on('history', status => {
+    const finish = (complete: boolean) => {
       clearTimeout(timer);
-      if (status.complete && (head || !invalid)) resolve();
+      if (complete || (!writing && head)) resolve();
       else reject(Error('Profile history is incomplete. Try again when connected.'));
-    });
+    };
+    const timer = setTimeout(() => finish(false), options.timeoutMs ?? 8000);
+    if (options.query) void refresh().then(() => finish(true), () => finish(false));
+    else sub.on('history', status => finish(status.complete && (!!head || !invalid)));
     sub.on('close', () => { clearTimeout(timer); reject(Error('Profile history closed. Try again.')); });
   });
-  return {ready, head: () => head, stop: () => sub.stop()};
+  return {ready, refresh, head: () => head, stop: () => sub.stop()};
 }
 
-/** Null denotes an authoritative empty history. Partial or unanswered history rejects. */
-export async function readOwnProfileHead(client: ProfileClient, pubkey: string, timeoutMs?: number): Promise<Event | null> {
-  const view = observe(client, pubkey, null, timeoutMs);
+/** Null denotes a completed empty history. A verified known head can be displayed offline. */
+export async function readOwnProfileHead(client: ProfileClient, pubkey: string, options: ProfileReadOptions = {}): Promise<Event | null> {
+  const view = observe(client, pubkey, null, options, false);
   try { await view.ready; return structuredClone(view.head()); } finally { view.stop(); }
 }
 
 /** Keep observing the head through signer approval. Publish only the reviewed changes. */
 export function saveOwnProfileEdits(
-  client: ProfileClient, pubkey: string, base: Event | null, edits: Readonly<Record<string, unknown>>,
+  client: ProfileClient, pubkey: string, base: Event | null, edits: Readonly<Record<string, unknown>>, options: ProfileReadOptions = {},
 ): Promise<Event> {
   const signer = client.signer;
   const changes = structuredClone(edits);
@@ -63,7 +78,7 @@ export function saveOwnProfileEdits(
       throw Error('Sign in with the profile owner before publishing.');
     const original = base && verifiedProfile(base, pubkey);
     if (base && !original) throw Error('The original profile could not be verified.');
-    const view = observe(client, pubkey, original ?? null);
+    const view = observe(client, pubkey, original ?? null, options, true);
     try {
       await view.ready;
       const head = view.head();
@@ -77,6 +92,7 @@ export function saveOwnProfileEdits(
       if (!signed || signed.content !== draft.content || signed.created_at !== draft.created_at ||
         JSON.stringify(signed.tags) !== JSON.stringify(draft.tags))
         throw Error('The signer returned a different profile.');
+      await view.refresh();
       const checkCurrent = () => {
         if (client.signer !== signer || view.head()?.id !== head?.id)
           throw Error('The account or profile changed during signing. Review your edits and try again.');
