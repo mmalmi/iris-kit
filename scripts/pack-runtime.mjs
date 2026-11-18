@@ -9,6 +9,7 @@ const runtimePackages = [
   { dir: 'ndk', build: true },
   { dir: 'ndk-cache', build: true },
   { dir: 'identity' },
+  { dir: 'profile-events', build: true },
   { dir: 'hashtree-app' },
   { dir: 'svelte-ui', build: true },
   { dir: 'release-tools' },

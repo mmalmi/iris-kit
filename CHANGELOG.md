@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## Runtime 0.2.13 - 2026-11-18
+
+- Release `@iris/profile-events@0.1.0`. Apps can change one profile field
+  while preserving custom JSON and event tags, detect conflicting edits, and
+  compare profile and follow-list versions with a large-removal indicator.
+
 ## Runtime 0.2.12 - 2026-11-18
 
 - Release `@iris/release-tools@0.1.2` with an opt-in native Iris Drive

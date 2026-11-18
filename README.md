@@ -6,6 +6,7 @@ Source: <https://git.iris.to/#/npub1xdhnr9mrv47kkrn95k6cwecearydeh8e895990n3acnt
 
 ## Packages
 
+- `@iris/profile-events`: dependency-free helpers for editing a Nostr profile and comparing signed profile and follow-list payloads.
 - `@iris/svelte-ui`: shared Svelte identity UI.
 - `@iris/release-tools`: release helpers used by standalone web apps.
 - `@iris/hashtree-app`: shared Hashtree app helpers and small UI components.
