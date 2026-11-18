@@ -1,6 +1,6 @@
 {
   "name": "@iris/svelte-ui",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "license": "MIT",
   "type": "module",
   "description": "Shared Svelte UI components for Iris apps",
@@ -25,6 +25,10 @@
     "./AccountSwitcher.svelte": {
       "svelte": "./src/AccountSwitcher.svelte",
       "default": "./src/AccountSwitcher.svelte"
+    },
+    "./ProfileSettings.svelte": {
+      "svelte": "./src/ProfileSettings.svelte",
+      "default": "./src/ProfileSettings.svelte"
     },
     "./CopyButton.svelte": {
       "svelte": "./src/CopyButton.svelte",

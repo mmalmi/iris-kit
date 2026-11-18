@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Component } from 'svelte';
 
-  type TabId = 'app' | 'storage' | 'traffic' | 'servers' | 'p2p';
+  type TabId = 'app' | 'profile' | 'storage' | 'traffic' | 'servers' | 'p2p';
   type SettingsPanel = Component<Record<string, never>>;
   type EmbeddedSettingsPanel = Component<{ embedded?: boolean }>;
 
@@ -9,6 +9,7 @@
     currentPath: string;
     navigate: (path: string) => void;
     appSettings: SettingsPanel;
+    profileSettings?: SettingsPanel;
     storageSettings: SettingsPanel;
     trafficSettings: EmbeddedSettingsPanel;
     serversSettings: EmbeddedSettingsPanel;
@@ -19,13 +20,23 @@
     currentPath,
     navigate,
     appSettings: AppSettings,
+    profileSettings: ProfileSettings,
     storageSettings: StorageSettings,
     trafficSettings: TransportUsageSettings,
     serversSettings: ServersSettings,
     p2pSettings: P2PSettings,
   }: Props = $props();
 
-  const tabs = [
+  const profileTab = {
+    id: 'profile',
+    label: 'Profile',
+    icon: 'i-lucide-user-round',
+    description: '',
+    activeRowClass: 'bg-accent/8',
+    iconFrameClass: 'bg-accent/12 text-accent ring-1 ring-accent/20',
+  } as const;
+
+  const appTabs = [
     {
       id: 'app',
       label: 'App',
@@ -76,6 +87,7 @@
   }>;
 
   const DEFAULT_TAB: TabId = 'app';
+  const tabs = $derived(ProfileSettings ? [profileTab, ...appTabs] : appTabs);
 
   function selectTab(id: TabId) {
     navigate(`/settings/${id}`);
@@ -88,6 +100,7 @@
   let activeTab = $derived.by((): TabId => {
     const path = currentPath;
     if (path === '/settings') return DEFAULT_TAB;
+    if (ProfileSettings && /^\/settings\/(profile|user|account)\/?$/.test(path)) return 'profile';
     if (path.startsWith('/settings/storage')) return 'storage';
     if (path.startsWith('/settings/traffic')) return 'traffic';
     if (path.startsWith('/settings/network/traffic')) return 'traffic';
@@ -101,7 +114,7 @@
   });
 
   let isSettingsRootRoute = $derived(currentPath === '/settings');
-  let activeItem = $derived(tabs.find((tab) => tab.id === activeTab) ?? tabs[0]);
+  let activeItem = $derived(tabs.find((tab) => tab.id === activeTab) ?? appTabs[0]);
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface-1 lg:flex-row">
@@ -152,11 +165,17 @@
 
       <div class="mb-6">
         <h2 class="text-2xl font-semibold text-text-1">{activeItem.label}</h2>
-        <p class="mt-1 text-sm text-text-3">{activeItem.description}</p>
+        {#if activeItem.description}
+          <p class="mt-1 text-sm text-text-3">{activeItem.id === 'app' && ProfileSettings
+            ? 'Build info and refresh actions.'
+            : activeItem.description}</p>
+        {/if}
       </div>
 
       {#if activeTab === 'app'}
         <AppSettings />
+      {:else if activeTab === 'profile' && ProfileSettings}
+        <ProfileSettings />
       {:else if activeTab === 'storage'}
         <StorageSettings />
       {:else if activeTab === 'traffic'}
