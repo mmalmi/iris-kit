@@ -1,17 +1,18 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { buildProfileDraft, compareProfileEvents, diffProfileFields, readProfileFields } from '@iris/profile-events';
+  import { buildRawProfileDraft, compareRawProfileEvents, diffRawProfileFields, equalJsonValues, readRawProfileFields, validateJsonValue } from '@iris/profile-events';
   type RawEvent = {id: string; pubkey: string; kind: number; created_at: number; content: string; tags: string[][]; sig: string};
   type Row = {id: number; key: string; text: string; type: 'Text' | 'JSON'};
   interface Props {
     event: RawEvent | null | undefined;
-    onsave: (edits: Record<string, unknown>, base: RawEvent | null) => Promise<unknown>;
+    onsaveraw?: (edits: Record<string, string | undefined>, base: RawEvent | null) => Promise<unknown>;
+    onsave?: (edits: Record<string, unknown>, base: RawEvent | null) => Promise<unknown>;
     disabled?: boolean;
     oncancel?: () => void;
     blockedReason?: string;
     lightningAddress?: string;
   }
-  let { event, onsave, disabled = false, oncancel, blockedReason = '', lightningAddress = '' }: Props = $props();
+  let { event, onsaveraw, onsave, disabled = false, oncancel, blockedReason = '', lightningAddress = '' }: Props = $props();
   const standard = [
     ['name', 'Username'], ['display_name', 'Display name'], ['about', 'Bio'],
     ['website', 'Website'], ['picture', 'Picture URL'], ['banner', 'Banner URL'],
@@ -19,7 +20,7 @@
   ];
   const empty = {content:'{}',tags:[],created_at:0};
   let base = $state.raw<RawEvent | null | undefined>(undefined);
-  let original = $state.raw<Record<string,unknown>>({});
+  let original = $state.raw<Record<string,string>>({});
   let text = $state<Record<string,string>>({});
   let rows = $state<Row[]>([]);
   let dirty = $state(false);
@@ -29,15 +30,15 @@
   let malformed = $state(false);
   let reviewing = $state(false);
   let nextId = 0;
-  const common = (key:string, data:Record<string,unknown>) => standard.some(([name])=>name===key) &&
-    (!Object.hasOwn(data,key) || typeof data[key]==='string');
+  const common = (key:string, data:Record<string,string>) => standard.some(([name])=>name===key) &&
+    (!Object.hasOwn(data,key) || data[key].startsWith('"'));
   function load(value:RawEvent|null|undefined) {
     base=value;
-    try { original=readProfileFields(value?.content ?? '{}'); malformed=false; }
+    try { original=readRawProfileFields(value?.content ?? '{}'); malformed=false; }
     catch { original={}; malformed=true; }
-    text=Object.fromEntries(standard.filter(([key])=>common(key,original)).map(([key])=>[key,String(original[key]??'')]));
+    text=Object.fromEntries(standard.filter(([key])=>common(key,original)).map(([key])=>[key,(Object.hasOwn(original,key)?JSON.parse(original[key]):'')]));
     rows=Object.entries(original).filter(([key])=>!common(key,original)).map(([key,value])=>({
-      id:nextId++, key, type:typeof value==='string'?'Text':'JSON', text:typeof value==='string'?value:JSON.stringify(value,null,2),
+      id:nextId++, key, type:value.startsWith('"')?'Text':'JSON', text:value.startsWith('"')?JSON.parse(value):value,
     }));
     dirty=false; reviewing=false; error=''; success='';
   }
@@ -50,21 +51,21 @@
   const remoteChanged = $derived(event !== undefined && base !== undefined && (base?.id??null)!==(event?.id??null));
   function changed() { dirty=true; reviewing=false; error=''; success=''; }
   function preview() {
-    const result=Object.create(null) as Record<string,unknown>;
+    const result=Object.create(null) as Record<string,string>;
     for(const [key] of standard) {
       if(!common(key,original)) continue;
-      if(text[key] || Object.hasOwn(original,key) && text[key]===original[key]) result[key]=text[key];
+      if(text[key] || original[key]==='""') result[key]=JSON.stringify(text[key]);
     }
     for(const row of rows) {
       if(!row.key.trim()) throw Error('Give each custom field a name.');
       if(Object.hasOwn(result,row.key) || common(row.key,original)) throw Error('Duplicate field: '+row.key);
-      try { result[row.key]=row.type==='Text'?row.text:JSON.parse(row.text); }
+      try { result[row.key]=row.type==='Text'?JSON.stringify(row.text):validateJsonValue(row.text); }
       catch { throw Error('Enter valid JSON for '+row.key+'.'); }
     }
-    const edits=diffProfileFields(original,result);
-    const next=buildProfileDraft(base??null,edits);
+    const edits=diffRawProfileFields(original,result);
+    const next=buildRawProfileDraft(base??null,edits);
     if(/nsec1/i.test(next.content)||/nsec1/i.test(JSON.stringify(next.tags))) throw Error('Remove the secret key before publishing.');
-    return {edits,changes:compareProfileEvents(base??empty,next)};
+    return {edits,changes:compareRawProfileEvents(base??empty,next)};
   }
   let draft=$state.raw<ReturnType<typeof preview>>();
   function review() {
@@ -78,7 +79,20 @@
     if (!draft || busy || disabled || blockedReason || base===undefined || !reviewing) return;
     busy=true; error='';
     try {
-      const saved=await onsave(draft.edits,base);
+      let saved: unknown;
+      if (onsaveraw) saved=await onsaveraw(draft.edits,base);
+      else {
+        if (!onsave) throw Error('This app has no profile publisher.');
+        const values: Record<string, unknown> = Object.create(null);
+        for (const [key, raw] of Object.entries(draft.edits)) {
+          if (raw===undefined) { values[key]=undefined; continue; }
+          const value=JSON.parse(raw), encoded=JSON.stringify(value);
+          if (!equalJsonValues(raw,encoded) || numberTokens(raw)!==numberTokens(encoded))
+            throw Error('This app needs an update to publish this exact number.');
+          values[key]=value;
+        }
+        saved=await onsave(values,base);
+      }
       if(saved && typeof saved==='object' && 'id' in saved && 'tags' in saved && 'sig' in saved && 'content' in saved)
         load(saved as RawEvent);
       else if (event !== undefined && event?.id !== base?.id) load(event);
@@ -87,7 +101,11 @@
     } catch(e) { error=e instanceof Error?e.message:String(e); }
     finally { busy=false; }
   }
-  const display = (value:unknown) => typeof value==='string'?value:JSON.stringify(value);
+  function numberTokens(raw: string): string {
+    const tokens=raw.match(/"(?:\\[\s\S]|[^"\\])*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/g)??[];
+    return tokens.filter(token=>!token.startsWith('"')).join(',');
+  }
+  const display = (key:string, raw:string|undefined) => raw?.startsWith('"') && standard.some(([name])=>name===key) ? JSON.parse(raw) : raw;
 </script>
 
 <div class="profile-editor">
@@ -104,8 +122,8 @@
         {#if draft.changes.massRemoval}<p role="alert"><strong>This update clears a large part of your profile.</strong></p>{/if}
         <dl>{#each draft.changes.fields as field}
           <dt>{standard.find(([key])=>key===field.key)?.[1]??field.key}</dt>
-          <dd>{#if Object.hasOwn(field,'before')}<del>{display(field.before) || '(empty)'}</del>{/if}
-            {#if Object.hasOwn(field,'after')}<ins>{display(field.after) || '(empty)'}</ins>{:else}<span>Removed</span>{/if}</dd>
+          <dd>{#if Object.hasOwn(field,'before')}<del>{display(field.key,field.before) || '(empty)'}</del>{/if}
+            {#if Object.hasOwn(field,'after')}<ins>{display(field.key,field.after) || '(empty)'}</ins>{:else}<span>Removed</span>{/if}</dd>
         {/each}</dl>
         {#each draft.changes.tagsRemoved as tag}<p>Remove image metadata <code>{JSON.stringify(tag)}</code></p>{/each}
         <p>Publishing shares these changes on your Nostr relays.</p>

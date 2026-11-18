@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { AppNostrClient } from './nostr.ts';
-import { readOwnProfileHead, saveOwnProfileEdits } from './profileEdits.ts';
+import { readOwnProfileHead, saveOwnProfileEdits, saveOwnRawProfileEdits } from './profileEdits.ts';
 
 function fixture() {
   const key = generateSecretKey(), pubkey = getPublicKey(key);
@@ -105,4 +105,21 @@ test('a newer remote head found by the post-sign query cancels the old replaceme
   const options={query:async()=>({events:[++reads===1?initial:latest],complete:true})};
   await assert.rejects(saveOwnProfileEdits(f.client,f.pubkey,initial,{about:'edit'},options),/during signing/);
   assert.equal(f.published.length,0);
+});
+
+
+test('raw JSON survives signing, unrelated rebases and exact numeric conflict checks', async()=>{
+  const f=fixture();
+  const signRaw=(content,created_at)=>finalizeEvent({kind:0,created_at,content,tags:[['custom','keep']]},f.key);
+  const base=signRaw('{"count":9007199254740994,"typed":"123","other":1e-9999}',1);
+  const newer=signRaw('{"count":9007199254740995,"typed":"123","other":1e-9999}',2);
+  f.events.push(newer,base);
+  await assert.rejects(saveOwnRawProfileEdits(f.client,f.pubkey,base,{count:'9007199254740996'}),/another client/);
+  const edit='{"deep":[9007199254740995,0.100000000000000000000001,2e-9999]}';
+  const out=await saveOwnRawProfileEdits(f.client,f.pubkey,base,{typed:edit});
+  assert.ok(out.content.includes('"typed":'+edit));
+  assert.ok(out.content.includes('"count":9007199254740995'));
+  assert.ok(out.content.includes('"other":1e-9999'));
+  assert.deepEqual(out.tags,newer.tags);
+  assert.equal(f.published.length,1);
 });

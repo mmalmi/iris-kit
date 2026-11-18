@@ -1,6 +1,6 @@
 {
   "name": "@iris/hashtree-app",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "license": "MIT",
   "type": "module",
   "description": "Shared Hashtree app runtime helpers and UI for Iris apps",
@@ -78,6 +78,6 @@
     "@hashtree/core": "https://github.com/mmalmi/hashtree/releases/download/hashtree-ts-runtime-v0.5.27/hashtree-core-0.4.0.tgz"
   },
   "dependencies": {
-    "@iris/profile-events": "https://github.com/mmalmi/iris-kit/releases/download/runtime-v0.2.13/iris-profile-events-0.1.0.tgz"
+    "@iris/profile-events": "https://github.com/mmalmi/iris-kit/releases/download/runtime-v0.2.15/iris-profile-events-0.2.0.tgz"
   }
 }

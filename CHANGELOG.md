@@ -1,5 +1,9 @@
 # Changelog
 
+## runtime-v0.2.16
+
+- Release @iris/svelte-ui 0.1.5 and @iris/hashtree-app 0.1.10. The shared profile editor displays, compares and signs exact JSON numbers, including values nested in arrays and objects.
+
 ## runtime-v0.2.15
 
 - Release @iris/profile-events 0.2.0 with exact JSON value editing, comparisons and conflict checks for public profile fields.

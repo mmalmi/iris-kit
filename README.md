@@ -26,10 +26,10 @@ from a verified Iris Kit commit while the next public package release is pending
 
 Use `@iris/svelte-ui/PublicProfileEditor.svelte` with the signed profile
 event. An undefined event means loading; null represents a confirmed empty
-history. Render the editor keyed by the active account. Its `onsave(edits, base)`
-callback receives the original event and only changed fields.
+history. Render the editor keyed by the active account. Its `onsaveraw(edits, base)`
+callback receives the original event and only changed fields as exact JSON text.
 Apps using `AppNostrClient` can call `readOwnProfileHead(client, pubkey)` and
-return `saveOwnProfileEdits(client, pubkey, base, edits)` from that callback.
+return `saveOwnRawProfileEdits(client, pubkey, base, edits)` from that callback.
 Both functions are exported from `@iris/hashtree-app/profileEdits`.
 
 For numeric JSON fields, use the raw profile helpers from `@iris/profile-events`.

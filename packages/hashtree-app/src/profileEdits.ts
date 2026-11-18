@@ -1,5 +1,5 @@
 import { verifyEvent, type Event } from 'nostr-tools/pure';
-import { buildProfileDraft, conflictingProfileFields, readProfileFields } from '@iris/profile-events';
+import { buildProfileDraft, buildRawProfileDraft, conflictingRawProfileFields, readRawProfileFields, type RawProfileEdits } from '@iris/profile-events';
 import type { AppNostrClient } from './nostr.ts';
 
 type ProfileClient = Pick<AppNostrClient, 'subscribe' | 'signer' | 'signEvent' | 'publish'>;
@@ -68,8 +68,17 @@ export async function readOwnProfileHead(client: ProfileClient, pubkey: string, 
 }
 
 /** Keep observing the head through signer approval. Publish only the reviewed changes. */
-export function saveOwnProfileEdits(
+export async function saveOwnProfileEdits(
   client: ProfileClient, pubkey: string, base: Event | null, edits: Readonly<Record<string, unknown>>, options: ProfileReadOptions = {},
+): Promise<Event> {
+  const values = readRawProfileFields(buildProfileDraft(null, edits).content);
+  const raw = Object.fromEntries(Object.keys(edits).map(key => [key, Object.hasOwn(values, key) ? values[key] : undefined]));
+  return saveOwnRawProfileEdits(client, pubkey, base, raw, options);
+}
+
+/** Publish exact JSON fragments, retaining the freshly verified profile and its tags. */
+export function saveOwnRawProfileEdits(
+  client: ProfileClient, pubkey: string, base: Event | null, edits: RawProfileEdits, options: ProfileReadOptions = {},
 ): Promise<Event> {
   const signer = client.signer;
   const changes = structuredClone(edits);
@@ -82,10 +91,10 @@ export function saveOwnProfileEdits(
     try {
       await view.ready;
       const head = view.head();
-      const conflicts = conflictingProfileFields(readProfileFields(original?.content ?? '{}'),
-        readProfileFields(head?.content ?? '{}'), changes);
+      const conflicts = conflictingRawProfileFields(readRawProfileFields(original?.content ?? '{}'),
+        readRawProfileFields(head?.content ?? '{}'), changes);
       if (conflicts.length) throw Error('Changed in another client: ' + conflicts.join(', ') + '. Reload and review these fields.');
-      const draft = buildProfileDraft(head, changes);
+      const draft = buildRawProfileDraft(head, changes);
       if (/nsec1/i.test(draft.content) || /nsec1/i.test(JSON.stringify(draft.tags)))
         throw Error('Remove the secret key before publishing your public profile.');
       const signed = verifiedProfile(await client.signEvent(structuredClone(draft)), pubkey);
