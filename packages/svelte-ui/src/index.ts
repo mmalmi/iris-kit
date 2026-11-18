@@ -1,3 +1,4 @@
+export { default as PublicProfileEditor } from './PublicProfileEditor.svelte';
 export { default as AccountSwitcher } from './AccountSwitcher.svelte';
 export { default as Avatar } from './Avatar.svelte';
 export { default as AvatarGroup } from './AvatarGroup.svelte';

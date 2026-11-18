@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## Runtime 0.2.14 - 2026-11-18
+
+- Release `@iris/svelte-ui@0.1.4` with a public Nostr profile editor for
+  standard and custom fields, tag inspection, and a preview before publication.
+- Release `@iris/hashtree-app@0.1.9` with verified profile reads and edits that
+  carry forward unrelated changes and recheck the current event while signing.
+
 ## Runtime 0.2.13 - 2026-11-18
 
 - Release `@iris/profile-events@0.1.0`. Apps can change one profile field

@@ -24,6 +24,14 @@ The adapter uses app-provided storage and does not synchronize between origins.
 An app may temporarily consume a committed, checksum-locked package archive
 from a verified Iris Kit commit while the next public package release is pending.
 
+Use `@iris/svelte-ui/PublicProfileEditor.svelte` with the signed profile
+event. An undefined event means loading; null represents a confirmed empty
+history. Render the editor keyed by the active account. Its `onsave(edits, base)`
+callback receives the original event and only changed fields.
+Apps using `AppNostrClient` can call `readOwnProfileHead(client, pubkey)` and
+return `saveOwnProfileEdits(client, pubkey, base, edits)` from that callback.
+Both functions are exported from `@iris/hashtree-app/profileEdits`.
+
 ## Native web releases
 
 Launcher-facing release profiles set `nativeReleaseGate: true`. Set

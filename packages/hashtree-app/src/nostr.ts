@@ -164,8 +164,9 @@ export class AppNostrClient {
     return signed;
   }
 
-  async publish(event: Event): Promise<unknown> {
+  async publish(event: Event, checkCurrent?: () => void): Promise<unknown> {
     const backend = await this.waitForBackend();
+    checkCurrent?.();
     return backend.publish(event);
   }
 
