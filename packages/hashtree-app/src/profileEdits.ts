@@ -104,7 +104,7 @@ export function saveOwnRawProfileEdits(
       await view.refresh();
       const checkCurrent = () => {
         if (client.signer !== signer || view.head()?.id !== head?.id)
-          throw Error('The account or profile changed during signing. Review your edits and try again.');
+          throw Error('Your sign-in or public profile changed during signing. Review your edits and try again.');
       };
       checkCurrent();
       const receipt = await client.publish(signed, checkCurrent);

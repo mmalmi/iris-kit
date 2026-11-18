@@ -30,7 +30,7 @@
       id: 'app',
       label: 'App',
       icon: 'i-lucide-settings-2',
-      description: 'Account tools, build info, and refresh actions.',
+      description: 'Profile tools, build info, and refresh actions.',
       activeRowClass: 'bg-accent/8',
       iconFrameClass: 'bg-accent/12 text-accent ring-1 ring-accent/20',
     },

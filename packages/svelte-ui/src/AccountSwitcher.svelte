@@ -31,7 +31,7 @@
   let {
     accounts = [],
     inputValue = '',
-    inputLabel = 'Add account',
+    inputLabel = 'Add profile',
     addLabel = 'Add',
     showAddForm = true,
     error = '',

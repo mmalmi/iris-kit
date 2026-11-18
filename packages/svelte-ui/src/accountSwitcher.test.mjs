@@ -12,9 +12,9 @@ test('AccountSwitcher is exported as a shared Svelte UI component', () => {
   });
 });
 
-test('AccountSwitcher keeps account UI generic and label driven', () => {
+test('AccountSwitcher defaults to an add-profile label and allows custom labels', () => {
   assert.match(switcherSource, /interface AccountSwitcherAccount/);
-  assert.match(switcherSource, /inputLabel = 'Add account'/);
+  assert.match(switcherSource, /inputLabel = 'Add profile'/);
   assert.match(switcherSource, /showAddForm = true/);
   assert.match(switcherSource, /\{#if showAddForm\}/);
   assert.match(switcherSource, /class="account-row"/);
